@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Datos y videos (nunca se versionan: pesan, y las caras son datos sensibles)
+data/
+*.mp4
+*.avi
+*.mov
+
+# Modelos y artefactos de ML (se regeneran desde el código + requirements)
+models/
+*.tflite
+*.onnx
+*.pkl
+
+# Secretos y entorno local
+.env
+*.log
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
