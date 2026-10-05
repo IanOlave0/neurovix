@@ -28,7 +28,7 @@ Durante la **ventana crítica (nov–dic 2026)** las aplicaciones internacionale
 - [x] Decisiones de diseño (copiloto, edge, núcleo geométrico)
 - [x] Estructura de planeación en markdown
 - [x] MCP paper-search conectado y verificado (PubMed/arXiv/bioRxiv/medRxiv/CrossRef)
-- [ ] Setup: `git init`, estructura de carpetas, entorno Python
+- [x] Setup: `git init`, estructura de carpetas, entorno Python (repo público + `.venv` 3.11 + `requirements.txt` fijado + tests 4/4)
 - [ ] Revisión de literatura: barrido sistemático + related work inicial
 - [ ] Fichas de la bibliografía base (5 papers ya identificados: angle maps PFP, symmetry scoring, blinking dinámico, fine-tuning en video, evaluación objetivo)
 
