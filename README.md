@@ -1,8 +1,8 @@
-# NeuroVix 🧠
+# NeuroVix 
 
 > Biomarcador neurológico cuantitativo desde la cámara de cualquier dispositivo: apoyo al triaje temprano de Evento Vascular Cerebral (EVC/ACV) mediante detección de asimetría facial.
 
-**Estado:** 🟡 Fase 0 — Planeación y revisión de literatura
+**Estado:** Fase 0 — Planeación y revisión de literatura
 *(Nombre provisional; el repo puede renombrarse.)*
 
 ## El problema
@@ -48,6 +48,6 @@ neurovix/
     └── riesgos.md     # Análisis de riesgos y mitigaciones
 ```
 
-## ⚠️ Disclaimer médico
+## Disclaimer médico
 
 Este proyecto es investigación y educación. **No es un dispositivo médico, no diagnostica y no sustituye la atención profesional.** Ante cualquier sospecha de ACV, llama inmediatamente a servicios de emergencia.
