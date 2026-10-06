@@ -29,8 +29,8 @@ Durante la **ventana de aplicaciones internacionales (nov–dic 2026)** estas ti
 - [x] Estructura de planeación en markdown
 - [x] MCP paper-search conectado y verificado (PubMed/arXiv/bioRxiv/medRxiv/CrossRef)
 - [x] Setup: `git init`, estructura de carpetas, entorno Python (repo público + `.venv` 3.11 + `requirements.txt` fijado + tests 4/4)
-- [ ] Revisión de literatura: barrido sistemático + related work inicial
-- [ ] Fichas de la bibliografía base (5 papers ya identificados: angle maps PFP, symmetry scoring, blinking dinámico, fine-tuning en video, evaluación objetivo)
+- [x] Revisión de literatura: barrido sistemático + related work inicial (9 fichas en docs/literatura.md; huecos R1/R3 confirmados)
+- [x] Fichas de la bibliografía base (9 papers: 5 PubMed + 2 arXiv directos + 2 metodológicos; ver docs/literatura.md)
 
 **Entregable:** este plan + protocolo + riesgos + related work inicial.
 

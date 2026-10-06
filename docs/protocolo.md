@@ -66,6 +66,10 @@
 | Colaboración clínica | Stretch goal | Validación externa | Tiempos, ética, permisos |
 | Grabaciones propias (equipo, con consentimiento) | Disponible | Desarrollo y sanity checks | No es evidencia clínica |
 
+**Vía futura (post-Fase 2):** desidentificación que preserva movimiento
+(SafeTriage, arXiv:2506.16578) como mecanismo para compartir cinemática
+facial sin exponer identidades — ver `docs/literatura.md` F6.
+
 **Regla:** cada resultado declara con qué fuente se obtuvo y qué **no** se puede afirmar.
 
 ## 5. Protocolo de evaluación

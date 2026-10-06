@@ -40,7 +40,7 @@
 |---|---|---|---|---|---|
 | R1 | No conseguir datos clínicos | Alta | Alto | Núcleo sin entrenamiento + síntesis + proxy | Mitigado por diseño |
 | R2 | Falso negativo da falsa tranquilidad | Media | Muy alto | Copiloto + sesgo FP + disclaimers | Mitigado por diseño |
-| R3 | Percepción de "wrapper de MediaPipe" | Media | Alto | Features cinemáticas + ablations + literatura | Pendiente (Fase 2) |
+| R3 | Percepción de "wrapper de MediaPipe" | Media | Alto | Features cinemáticas + ablations + literatura (9 fichas en docs/literatura.md; arte previo mapeado: parálisis periférica crónica, sin triaje prehospitalario agudo) | En mitigación (Fase 2) |
 | R4 | Confounders de pose/iluminación | Alta | Medio | Normalización + exclusiones | Pendiente (Fase 1) |
 | R5 | Scope creep (muchas features/gestos) | Alta | Medio | Fases con DoD; MVP primero | Controlado |
 | R6 | Regulatorio si se presenta como diagnóstico | Media | Alto | Framing research/educativo; sin uso clínico | Mitigado por diseño |
