@@ -27,3 +27,6 @@ models/
 .DS_Store
 
 .pytest_cache/
+
+# Coursework de la materia (privado, no publico)
+docs/ti1/

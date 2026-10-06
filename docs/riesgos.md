@@ -6,12 +6,12 @@
 
 | Prueba | Veredicto | Razón |
 |---|---|---|
-| 1. Facilidad de construcción | ✅ Pasa fuerte | MVP geométrico en 2-3 semanas; CPU-only; modelos preentrenados |
-| 2. Usabilidad y adopción | ✅ Pasa fuerte | Usuario claro; cero hardware especial; demo interactiva; reserva regulatoria |
-| 3. Competencia e innovación | ⚠️ Pasa con reservas | Existe arte previo; diferenciación: cinemática temporal + triaje prehospitalario + edge LATAM + central vs. periférica |
-| 4. Datos | 🚨 Riesgo crítico | No hay dataset público de parálisis facial aguda por ACV con gestos |
-| 5. Tolerancia al error | ⚠️ Riesgo alto, mitigable | Categoría de falso negativo letal — requiere diseño copiloto |
-| 6. Viabilidad económica | ✅ Pasa fuerte | Inferencia edge ~$0; ROI en hora dorada |
+| 1. Facilidad de construcción | [OK] Pasa fuerte | MVP geométrico en 2-3 semanas; CPU-only; modelos preentrenados |
+| 2. Usabilidad y adopción | [OK] Pasa fuerte | Usuario claro; cero hardware especial; demo interactiva; reserva regulatoria |
+| 3. Competencia e innovación | [Reserva] Pasa con reservas | Existe arte previo; diferenciación: cinemática temporal + triaje prehospitalario + edge LATAM + central vs. periférica |
+| 4. Datos | [Crítico] Riesgo crítico | No hay dataset público de parálisis facial aguda por ACV con gestos |
+| 5. Tolerancia al error | [Reserva] Riesgo alto, mitigable | Categoría de falso negativo letal — requiere diseño copiloto |
+| 6. Viabilidad económica | [OK] Pasa fuerte | Inferencia edge ~$0; ROI en hora dorada |
 
 ## Cómo sobrevive a cada prueba
 

@@ -3,7 +3,7 @@
 > Biomarcador neurológico cuantitativo desde la cámara de cualquier dispositivo: apoyo al triaje temprano de Evento Vascular Cerebral (EVC/ACV) mediante detección de asimetría facial.
 
 **Estado:** Fase 0 — Planeación y revisión de literatura
-*(Nombre provisional; el repo puede renombrarse.)*
+*(Nombre provisional; el repo puede renombrarse. Proyecto vinculado a la materia Taller de Investigación I, IT Colima.)*
 
 ## El problema
 

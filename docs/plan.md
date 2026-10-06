@@ -10,17 +10,17 @@
 
 ## Resumen de fases (calendario realineado)
 
-| Fase | Ventana | Entregable principal | Anclaje externo |
+| Fase | Ventana | Entregable principal | Meta de evidencia |
 |---|---|---|---|
 | 0. Planeación y literatura | 2–9 oct 2026 | Docs + arte previo mapeado | — |
-| 1. MVP geométrico | 9–30 oct 2026 | Demo en vivo + índice de asimetría | Evidencia citable: **MPI (1 nov)** |
-| 1.5. Mantenimiento | 1 nov – 16 dic 2026 | Literatura + robustez de landmarks + tareas pequeñas | **EPFL (29 nov) · ETH (16 dic)** |
-| 2. Protocolo experimental | 4 ene – 27 feb 2027 | Evaluación rigurosa + resultados | **UTSIP (~15 ene) · ENLACE (5 feb)** |
-| 3. Redacción y publicación | 1 mar – 30 abr 2027 | Preprint + repo público | **OIST con preprint (± 15 oct 2027)** |
+| 1. MVP geométrico | 9–30 oct 2026 | Demo en vivo + índice de asimetría | Demo citable + resultados preliminares |
+| 1.5. Mantenimiento | 1 nov – 16 dic 2026 | Literatura + robustez de landmarks + tareas pequeñas | Related work completo; sin experimentos grandes |
+| 2. Protocolo experimental | 4 ene – 27 feb 2027 | Evaluación rigurosa + resultados | Tabla de resultados reproducible |
+| 3. Redacción y publicación | 1 mar – 30 abr 2027 | Preprint + repo público | PDF público + repo reproducible |
 
 ## Regla de prioridad
 
-Durante la **ventana crítica (nov–dic 2026)** las aplicaciones internacionales tienen prioridad absoluta y NeuroVix entra en modo mantenimiento. Si el proyecto entra en conflicto con el promedio (≥8.6) o con deadlines de aplicación, el proyecto cede.
+Durante la **ventana de aplicaciones internacionales (nov–dic 2026)** estas tienen prioridad absoluta y NeuroVix entra en modo mantenimiento. Si el proyecto entra en conflicto con materias o deadlines externos, el proyecto cede.
 
 ## Fase 0 — Planeación y literatura (2–9 oct 2026)
 
@@ -44,11 +44,11 @@ Durante la **ventana crítica (nov–dic 2026)** las aplicaciones internacionale
 - [ ] Demo en vivo: overlay de malla + métricas en tiempo real
 - [ ] **Robustez R7:** sanity check de estabilidad de landmarks ante asimetría sintética controlada
 
-**Criterio de terminado (DoD):** la demo corre en tiempo real en laptop, cuantifica asimetría inducida controladamente y documenta su comportamiento ante caras asimétricas. Se cierra antes del cierre de la aplicación MPI.
+**Criterio de terminado (DoD):** la demo corre en tiempo real en laptop, cuantifica asimetría inducida controladamente y documenta su comportamiento ante caras asimétricas. Cierre 30 oct: demo funcional + evidencia preliminar documentada.
 
 ## Fase 1.5 — Modo mantenimiento (1 nov – 16 dic 2026)
 
-Prioridad absoluta: aplicaciones (EPFL 29 nov · ETH 16 dic). NeuroVix se mantiene vivo sin competir:
+Prioridad absoluta: aplicaciones internacionales. NeuroVix se mantiene vivo sin competir:
 
 - [ ] Completar related work (lectura + fichas de papers)
 - [ ] Preparar datos de desarrollo (grabaciones propias con consentimiento)
@@ -65,7 +65,7 @@ Prioridad absoluta: aplicaciones (EPFL 29 nov · ETH 16 dic). NeuroVix se mantie
 - [ ] Evaluación: splits por sujeto, sens@spec, AUC con IC
 - [ ] Escalera de baselines y ablations
 - [ ] Análisis de error de falsos negativos
-- [ ] **Milestone:** resultados preliminares antes del **5 feb** (insumo para el ensayo ENLACE)
+- [ ] **Milestone:** resultados preliminares a inicios de febrero (insumo para ensayos de aplicación)
 
 **DoD:** tabla de resultados reproducible con métricas, ablations y análisis de error.
 
@@ -76,7 +76,7 @@ Prioridad absoluta: aplicaciones (EPFL 29 nov · ETH 16 dic). NeuroVix se mantie
 - [ ] Identificar venue y calendario de envíos (LatinX in AI @ NeurIPS · ML4H · IEEE EMBC student track)
 
 **DoD:** PDF público + repo reproducible.
-**Resultado esperado para la ruta:** preprint disponible 5+ meses antes de la aplicación a OIST (15 oct 2027).
+**Resultado esperado:** preprint disponible con margen para el ciclo de aplicaciones de otoño 2027.
 
 ## Backlog (post-v1)
 
