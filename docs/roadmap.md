@@ -7,13 +7,13 @@
 1. **Product:** on-device support tool for early stroke triage through facial
    asymmetry quantification. No special hardware.
 2. **Research:** publishable artifact (preprint + reproducible public repo)
-   answering the question in [protocolo.md](protocolo.md).
+   answering the question in [protocol.md](protocol.md).
 
 ## Roadmap
 
 | Phase | Status | Deliverable | Acceptance |
 |---|---|---|---|
-| 0. Planning and literature | Done | Study protocol, literature survey (9 notes), reproducible setup | protocolo.md, literatura.md, pinned env + 4/4 tests |
+| 0. Planning and literature | Done | Study protocol, literature survey (9 notes), reproducible setup | protocol.md, literature.md, pinned env + 4/4 tests |
 | 1. Geometric MVP | In progress | Live demo + interpretable asymmetry index | Real-time on laptop; quantified induced asymmetry; documented behavior on asymmetric faces |
 | 2. Experimental protocol | Planned | Rigorous evaluation + results | Reproducible results table with metrics, ablations, error analysis |
 | 3. Writing and publication | Planned | Preprint + public repo | Public PDF + reproducible repo |
@@ -21,8 +21,8 @@
 ## Phase 0 — Planning and literature
 
 - [x] Design decisions (copilot, edge, interpretable geometric core)
-- [x] Study protocol ([protocolo.md](protocolo.md))
-- [x] Systematic literature sweep + related work (9 notes in [literatura.md](literatura.md); data and novelty gaps confirmed)
+- [x] Study protocol ([protocol.md](protocol.md))
+- [x] Systematic literature sweep + related work (9 notes in [literature.md](literature.md); data and novelty gaps confirmed)
 - [x] Reproducible setup (public repo, pinned environment, 4/4 tests)
 
 ## Phase 1 — Geometric MVP
@@ -68,5 +68,5 @@ controlled induced asymmetry, and documents its behavior on asymmetric faces.
 
 ## Active risks
 
-See [riesgos.md](riesgos.md). The design-driving risks: R1 (data),
+See [risks.md](risks.md). The design-driving risks: R1 (data),
 R2 (error tolerance), R7 (landmark degradation on asymmetric faces).

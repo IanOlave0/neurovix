@@ -1,33 +1,33 @@
-"""Grupos de landmarks de MediaPipe FaceMesh usados por NeuroVix.
+"""MediaPipe FaceMesh landmark groups used by NeuroVix.
 
-Diseno deliberado (ver docs/protocolo.md, seccion 3.1 y riesgo R7):
-- Los indices viven AQUI como constantes con nombre, nunca como numeros
-  magicos regados en el codigo. Si MediaPipe cambia la topologia entre
-  versiones, hay UN solo lugar que auditar.
-- `validar_indices()` es la red de seguridad: cualquier upgrade de
-  dependencias que mueva un indice rompe los tests, no el diagnostico.
+Deliberate design (see docs/protocol.md, section 3.1, and risk R7):
+- Indices live HERE as named constants, never as magic numbers scattered
+  through the code. If MediaPipe changes the topology across versions,
+  there is exactly ONE file to audit.
+- `validate_indices()` is the safety net: any dependency upgrade that moves
+  an index breaks the tests, not the clinical pipeline.
 
-Indices canonicos de la topologia FaceMesh (468 puntos), verificados contra
-la documentacion de la malla. Al actualizar `mediapipe`, revalidar este
-modulo corriendo la suite: `pytest tests/ -v`.
+Canonical FaceMesh-topology indices (468 points), verified against the mesh
+documentation. When upgrading `mediapipe`, revalidate this module by running
+the suite: `pytest tests/ -v`.
 """
 
 N_LANDMARKS = 468
 
-# Punta de la nariz (referencia del eje medio facial).
+# Nose tip (facial-midline-axis reference).
 NOSE_TIP = 1
-# Menton (contorno inferior).
+# Chin (lower contour).
 CHIN = 152
 
-# Ojos: esquinas externa e interna de cada lado.
-# La distancia interocular derivada de estos puntos es la unidad de
-# normalizacion de escala (protocolo, seccion 3.2).
+# Eyes: outer and inner corners per side.
+# The interocular distance derived from these points is the scale
+# normalization unit (protocol, section 3.2).
 LEFT_EYE_OUTER = 33
 LEFT_EYE_INNER = 133
 RIGHT_EYE_INNER = 362
 RIGHT_EYE_OUTER = 263
 
-# Boca: comisuras y centros labiales (gesto de sonrisa / mostrar dientes).
+# Mouth: corners and lip centers (smile / teeth-baring gesture).
 MOUTH_LEFT = 61
 MOUTH_RIGHT = 291
 UPPER_LIP = 13
@@ -47,13 +47,13 @@ MOUTH = {
     "lower_lip": LOWER_LIP,
 }
 
-# TODO(Fase 1): grupos de cejas y contorno para el gesto de elevacion de
-# cejas (discriminacion central vs. periferica, hipotesis H2).
+# TODO(Phase 1): eyebrow and contour groups for the eyebrow-raising gesture
+# (central vs. peripheral discrimination, hypothesis H2).
 
 
-def validar_indices() -> None:
-    """Falla rapido si un indice sale del rango de la malla."""
-    todos = [NOSE_TIP, CHIN, *EYES.values(), *MOUTH.values()]
-    assert len(todos) == len(set(todos)), "indices duplicados en landmarks.py"
-    fuera = [i for i in todos if not 0 <= i < N_LANDMARKS]
-    assert not fuera, f"indices fuera de rango [0, {N_LANDMARKS}): {fuera}"
+def validate_indices() -> None:
+    """Fail fast if any index falls outside the mesh range."""
+    all_indices = [NOSE_TIP, CHIN, *EYES.values(), *MOUTH.values()]
+    assert len(all_indices) == len(set(all_indices)), "duplicate indices in landmarks.py"
+    out = [i for i in all_indices if not 0 <= i < N_LANDMARKS]
+    assert not out, f"indices out of range [0, {N_LANDMARKS}): {out}"

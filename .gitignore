@@ -5,28 +5,27 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Datos y videos (nunca se versionan: pesan, y las caras son datos sensibles)
+# Data and video (never versioned: heavy, and faces are sensitive data)
 data/
 *.mp4
 *.avi
 *.mov
 
-# Modelos y artefactos de ML (se regeneran desde el código + requirements)
+# ML models and artifacts (regenerated from code + requirements)
 models/
 *.tflite
 *.onnx
 *.pkl
 
-# Secretos y entorno local
+# Secrets and local environment
 .env
 *.log
 
-# Editores y sistema
+# Coursework (private, not public)
+docs/ti1/
+
+# Editors and OS
 .vscode/
 .idea/
 .DS_Store
-
 .pytest_cache/
-
-# Coursework de la materia (privado, no publico)
-docs/ti1/

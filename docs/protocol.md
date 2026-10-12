@@ -1,7 +1,7 @@
 # Experimental protocol — NeuroVix
 
 > Study design turning the MVP into a research artifact. Version 0.1 (living document).
-> Prior-art survey: `literatura.md`.
+> Prior-art survey: `literature.md`.
 
 ## 1. Research question
 
@@ -72,7 +72,7 @@ facial palsy discrimination over static asymmetry metrics?
 
 **Future direction:** motion-preserving de-identification (SafeTriage,
 arXiv:2506.16578) as a mechanism for sharing facial kinematics without
-exposing identities — see `literatura.md` (F6).
+exposing identities — see `literature.md` (F6).
 
 **Rule:** every result declares its data source and what **cannot** be claimed from it.
 

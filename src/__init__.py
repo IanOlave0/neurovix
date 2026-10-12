@@ -1,5 +1,5 @@
-"""NeuroVix — cuantificacion de asimetria facial para apoyo al triaje de EVC/ACV.
+"""NeuroVix — facial asymmetry quantification for stroke triage support.
 
-Nucleo geometrico interpretable (Fase 1): captura -> landmarks 3D ->
-normalizacion -> indice de asimetria. Ver docs/protocolo.md.
+Interpretable geometric core (Phase 1): capture -> 3D landmarks ->
+normalization -> asymmetry index. See docs/protocol.md.
 """

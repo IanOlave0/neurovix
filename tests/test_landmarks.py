@@ -1,29 +1,29 @@
-"""Red de seguridad del modulo de landmarks (riesgo R7).
+"""Landmark-module safety net (risk R7).
 
-Estos tests no necesitan camara: verifican invariantes de la topologia.
-Si un upgrade de `mediapipe` mueve los indices, ESTO falla primero,
-no el pipeline clinico.
+These tests need no camera: they check topology invariants.
+If a `mediapipe` upgrade moves the indices, THIS fails first —
+not the clinical pipeline.
 """
 
-from src.landmarks import EYES, MOUTH, N_LANDMARKS, validar_indices
+from src.landmarks import EYES, MOUTH, N_LANDMARKS, validate_indices
 
 
-def test_malla_completa():
+def test_full_mesh():
     assert N_LANDMARKS == 468
 
 
-def test_indices_en_rango_y_sin_duplicados():
-    validar_indices()  # lanza AssertionError con el detalle
+def test_indices_in_range_without_duplicates():
+    validate_indices()  # raises AssertionError with details
 
 
-def test_grupos_simetricos():
-    # Cada lado aporta el mismo numero de puntos: la asimetria que midamos
-    # debe venir de la cara, no de un grupo mal definido.
+def test_symmetric_groups():
+    # Each side contributes the same number of points: measured asymmetry
+    # must come from the face, not from a lopsided group definition.
     assert len([k for k in EYES if k.startswith("left")]) == len(
         [k for k in EYES if k.startswith("right")]
     )
     assert len([k for k in MOUTH if "left" in k or "right" in k]) == 2
 
 
-def test_ojos_y_boca_no_se_solapan():
+def test_eyes_and_mouth_do_not_overlap():
     assert not set(EYES.values()) & set(MOUTH.values())
