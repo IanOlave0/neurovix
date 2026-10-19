@@ -4,7 +4,6 @@
 > triage support through facial asymmetry detection.
 
 **Status:** Phase 1 — Geometric MVP (in progress)
-*(Working name; the repo may be renamed. Undergraduate research course project — Taller de Investigación I, IT Colima.)*
 
 ## Problem
 

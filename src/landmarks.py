@@ -8,8 +8,10 @@ Deliberate design (see docs/protocol.md, section 3.1, and risk R7):
   an index breaks the tests, not the clinical pipeline.
 
 Canonical FaceMesh-topology indices (468 points), verified against the mesh
-documentation. When upgrading `mediapipe`, revalidate this module by running
-the suite: `pytest tests/ -v`.
+documentation. The Tasks FaceLandmarker used in `mesh.py` returns 478
+points whose first 468 keep this exact topology (last 10 are iris), so
+every constant below stays valid. When upgrading `mediapipe`, revalidate
+this module by running the suite: `pytest tests/ -v`.
 """
 
 N_LANDMARKS = 468

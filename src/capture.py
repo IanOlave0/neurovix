@@ -5,8 +5,8 @@ and a rest baseline per session (protocol section 2). No landmarks yet:
 later stages consume what this module produces.
 
 Usage:
-    python src/captura.py                  # interactive (window + keys)
-    python src/captura.py --headless 5     # no GUI: capture 5 s, print stats
+    python src/capture.py                  # interactive (window + keys)
+    python src/capture.py --headless 5     # no GUI: capture 5 s, print stats
 
 Keys (interactive): q = quit, r = re-take rest baseline.
 """
@@ -58,14 +58,14 @@ def main() -> None:
     timestamps: list[float] = []
     rest_frames: list = []
     rest_until = time.time() + REST_SECONDS
-    print(f"[captura] recording rest baseline ({REST_SECONDS}s, stay still)...")
+    print(f"[capture] recording rest baseline ({REST_SECONDS}s, stay still)...")
 
     start = time.time()
     while True:
         ok, frame = cap.read()
         t = time.time()  # timestamp AT capture, before any processing
         if not ok:
-            print("[captura] dropped frame (camera hiccup, not fatal)")
+            print("[capture] dropped frame (camera hiccup, not fatal)")
             continue
         timestamps.append(t)
 
@@ -73,13 +73,13 @@ def main() -> None:
             rest_frames.append(frame)
         elif len(rest_frames) and not getattr(main, "_rest_done", False):
             main._rest_done = True  # noqa: SLF001 — tiny script, no class needed
-            print(f"[captura] rest baseline ready: {len(rest_frames)} frames")
+            print(f"[capture] rest baseline ready: {len(rest_frames)} frames")
 
         if args.headless:
             if t - start >= args.headless:
                 break
         else:
-            cv2.imshow("neurovix - captura (q=quit, r=rest)", frame)
+            cv2.imshow("neurovix - capture (q=quit, r=rest)", frame)
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
                 break
@@ -87,14 +87,14 @@ def main() -> None:
                 rest_frames = []
                 rest_until = time.time() + REST_SECONDS
                 main._rest_done = False  # noqa: SLF001
-                print("[captura] re-taking rest baseline...")
+                print("[capture] re-taking rest baseline...")
 
     cap.release()
     cv2.destroyAllWindows()
 
     stats = summarize(timestamps, nominal)
-    print("[captura] session stats:", stats)
-    print(f"[captura] rest frames stored: {len(rest_frames)}")
+    print("[capture] session stats:", stats)
+    print(f"[capture] rest frames stored: {len(rest_frames)}")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,8 @@ facial palsy discrimination over static asymmetry metrics?
 
 > Technical note: pin the exact MediaPipe FaceMesh indices in a `landmarks.py`
 > module as documented constants (indices change across versions).
+> Implementation uses the Tasks FaceLandmarker in VIDEO mode; its first 468
+> points keep the FaceMesh topology (see `src/mesh.py`).
 
 ### 3.2 Feature families
 
