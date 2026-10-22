@@ -102,7 +102,8 @@ def main() -> None:
                         print(f"[demo] rest ready: {rest_index}")
                     norm, info = normalize_frame(pts)
                     if not info["accepted"]:
-                        lines = ["turn your face to the camera (yaw gate)"]
+                        lines = [f"pose out of range ({info['rejected']}: "
+                                 f"roll {info['roll_deg']:.0f}d, yaw {info['yaw_proxy']:.2f})"]
                     else:
                         idx = smile_index(norm)
                         g = gesture_score(idx, rest_index) if rest_index else 0.0

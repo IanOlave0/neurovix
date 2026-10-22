@@ -24,6 +24,10 @@ from src.landmarks import (
 )
 
 YAW_EXCLUDE = 0.25  # |yaw proxy| above this -> frame rejected (tune in Phase 1)
+ROLL_EXCLUDE_DEG = 15.0  # |roll| above this -> frame rejected, not corrected.
+# 2D derotation cannot undo real 3D tilt (perspective + occlusion), and the
+# eye line it measures from degrades under tilt too. Initial value is a
+# placeholder: calibrate against logged roll-vs-asymmetry data (see demo).
 
 
 def interocular(points: np.ndarray) -> float:
@@ -73,5 +77,12 @@ def normalize_frame(points: np.ndarray) -> tuple[np.ndarray, dict]:
     accepted). Rejected frames must be dropped by the caller, never
     silently corrected (protocol 3.3)."""
     yaw = yaw_proxy(points)
-    info = {"roll_deg": roll_deg(points), "yaw_proxy": yaw, "accepted": abs(yaw) <= YAW_EXCLUDE}
+    roll = roll_deg(points)
+    reason = None
+    if abs(yaw) > YAW_EXCLUDE:
+        reason = "yaw"
+    elif abs(roll) > ROLL_EXCLUDE_DEG:
+        reason = "roll"
+    info = {"roll_deg": roll, "yaw_proxy": yaw,
+            "accepted": reason is None, "rejected": reason}
     return normalize_scale(deroll(points)), info
