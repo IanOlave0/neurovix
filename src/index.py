@@ -22,6 +22,7 @@ nature, so the signal is always a DELTA against the subject's own baseline
 import numpy as np
 
 from src.landmarks import MOUTH_LEFT, MOUTH_RIGHT, NOSE_TIP
+from src.normalize import deroll, normalize_scale
 
 SYMMETRIC_TOL = 0.02  # below this half-width gap: "symmetric" (tune in Phase 1)
 
@@ -65,3 +66,13 @@ def smile_index(pts: np.ndarray) -> dict:
 def gesture_score(smile: dict, rest: dict) -> float:
     """The clinical signal: smile asymmetry MINUS rest asymmetry."""
     return round(smile["asymmetry"] - rest["asymmetry"], 4)
+
+
+def build_rest_index(meshes: list[np.ndarray]) -> dict:
+    """Rest baseline from RAW meshes, normalized exactly like live frames
+    (scale + deroll, no yaw gate — rest assumes a still, frontal subject).
+    Fixes the raw-vs-normalized mismatch: a rest built on pixels cannot be
+    subtracted from a live index built on eye-widths."""
+    normed = [normalize_scale(deroll(m)) for m in meshes]
+    mean_rest = np.mean(np.stack(normed), axis=0)
+    return smile_index(mean_rest)

@@ -24,6 +24,9 @@ models/
 # Coursework (private, not public)
 docs/ti1/
 
+# Per-frame run logs (local calibration data, never versioned)
+runs/
+
 # Editors and OS
 .vscode/
 .idea/

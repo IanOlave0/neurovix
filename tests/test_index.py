@@ -9,7 +9,7 @@ landmarker (protocol section 7, risks.md R7).
 
 import numpy as np
 
-from src.index import gesture_score, smile_index
+from src.index import build_rest_index, gesture_score, smile_index
 from src.landmarks import (
     CHIN,
     LEFT_EYE_INNER,
@@ -70,3 +70,12 @@ def test_rolled_face_still_symmetric_after_deroll():
     pts[:, 0] = c * xy[:, 0] - s * xy[:, 1] + 0.5
     pts[:, 1] = s * xy[:, 0] + c * xy[:, 1] + 0.5
     assert smile_index(deroll(pts))["weaker_side"] == "symmetric"
+
+
+def test_rest_baseline_is_scale_invariant():
+    # Regression test: rest built on raw pixels must equal rest built at
+    # any camera distance (the old bug subtracted pixel-rest from
+    # normalized-live). A face twice as close = identical rest index.
+    rest_near = build_rest_index([fake_face()])
+    rest_far = build_rest_index([fake_face() * 2.0])
+    assert rest_near == rest_far

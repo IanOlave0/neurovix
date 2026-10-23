@@ -16,13 +16,16 @@ Keys: q = quit, r = re-take rest baseline.
 """
 
 import argparse
+import csv
 import time
+from datetime import datetime
+from pathlib import Path
 
 import cv2
 import numpy as np
 
 from src.capture import REST_SECONDS, open_camera
-from src.index import SYMMETRIC_TOL, gesture_score, smile_index
+from src.index import SYMMETRIC_TOL, build_rest_index, gesture_score, smile_index
 from src.landmarks import (
     CHIN,
     EYES,
@@ -32,7 +35,7 @@ from src.landmarks import (
     RIGHT_EYE_OUTER,
 )
 from src.mesh import create_landmarker, extract_landmarks
-from src.normalize import normalize_frame
+from src.normalize import interocular, normalize_frame
 
 MARKERS = {
     "eyes": (list(EYES.values()), (255, 255, 0)),
@@ -70,6 +73,14 @@ def main() -> None:
     landmarker = create_landmarker()
     last_ms = 0
 
+    log_path = Path("runs") / f"demo_log_{datetime.now():%Y%m%d_%H%M%S}.csv"
+    log_path.parent.mkdir(exist_ok=True)
+    log_file = open(log_path, "w", newline="")
+    log = csv.writer(log_file)
+    log.writerow(["t", "roll_deg", "yaw_proxy", "accepted", "rejected",
+                  "asymmetry", "angle_diff_deg", "gesture", "interocular_norm"])
+    print(f"[demo] logging to {log_path}")
+
     rest_meshes: list[np.ndarray] = []
     rest_until = time.time() + REST_SECONDS
     rest_index: dict | None = None
@@ -90,20 +101,24 @@ def main() -> None:
             pts = extract_landmarks(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
+                log.writerow([round(t, 3), "", "", False, "no-face",
+                              "", "", "", ""])
             else:
                 if t < rest_until:
                     rest_meshes.append(pts)
                     lines = [f"recording rest... {len(rest_meshes)}"]
                 else:
                     if not rest_ready and rest_meshes:
-                        mean_rest = np.mean(np.stack(rest_meshes), axis=0)
-                        rest_index = smile_index(mean_rest)
+                        rest_index = build_rest_index(rest_meshes)
                         rest_ready = True
                         print(f"[demo] rest ready: {rest_index}")
                     norm, info = normalize_frame(pts)
                     if not info["accepted"]:
                         lines = [f"pose out of range ({info['rejected']}: "
                                  f"roll {info['roll_deg']:.0f}d, yaw {info['yaw_proxy']:.2f})"]
+                        log.writerow([round(t, 3), round(info["roll_deg"], 1),
+                                      round(info["yaw_proxy"], 3), False,
+                                      info["rejected"], "", "", "", ""])
                     else:
                         idx = smile_index(norm)
                         g = gesture_score(idx, rest_index) if rest_index else 0.0
@@ -112,6 +127,10 @@ def main() -> None:
                             f"asymmetry: {idx['asymmetry']} [{status}]",
                             f"weaker: {idx['weaker_side']}  gesture: {g}",
                         ]
+                        log.writerow([round(t, 3), round(info["roll_deg"], 1),
+                                      round(info["yaw_proxy"], 3), True, "",
+                                      idx["asymmetry"], idx["angle_diff_deg"], g,
+                                      round(interocular(pts), 1)])
                     frame = draw_markers(frame, pts)
 
             if args.headless:
@@ -129,6 +148,8 @@ def main() -> None:
     finally:
         cap.release()
         landmarker.close()
+        log_file.close()
+        print(f"[demo] log saved to {log_path}")
         cv2.destroyAllWindows()
 
     if len(fps_ts) > 1:
