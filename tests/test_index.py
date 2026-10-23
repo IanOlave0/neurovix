@@ -79,3 +79,25 @@ def test_rest_baseline_is_scale_invariant():
     rest_near = build_rest_index([fake_face()])
     rest_far = build_rest_index([fake_face() * 2.0])
     assert rest_near == rest_far
+
+
+def test_dynamic_asymmetry_zero_without_movement():
+    from src.index import dynamic_asymmetry
+
+    pts = fake_face()
+    dyn = dynamic_asymmetry(pts, pts)
+    assert dyn["dynamic"] == 0.0
+    assert dyn["status"] == "OK"
+
+
+def test_dynamic_asymmetry_detects_one_sided_movement():
+    from src.index import dynamic_asymmetry
+
+    rest = fake_face()
+    smile = fake_face()
+    smile[MOUTH_RIGHT, 0] -= 0.10  # only the right corner traveled
+    dyn = dynamic_asymmetry(smile, rest)
+    assert dyn["move_right"] == 0.10
+    assert dyn["move_left"] == 0.0
+    assert dyn["dynamic"] == 0.10
+    assert dyn["status"] == "CHECK"

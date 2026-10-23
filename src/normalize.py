@@ -86,3 +86,46 @@ def normalize_frame(points: np.ndarray) -> tuple[np.ndarray, dict]:
     info = {"roll_deg": roll, "yaw_proxy": yaw,
             "accepted": reason is None, "rejected": reason}
     return normalize_scale(deroll(points)), info
+
+
+def yaw_from_matrix(matrix: np.ndarray) -> float:
+    """Yaw angle (radians) from a 4x4 facial pose matrix.
+
+    Takes the rotation block, normalizes out scale per column, and reads
+    yaw = atan2(R[0,2], R[2,2]) — the Y-rotation convention. Sign and
+    magnitude are verified empirically (frontalized yaw_proxy must shrink
+    on real tilted frames); if it ever grows, this convention is wrong.
+    """
+    r = np.asarray(matrix, dtype=float)[:3, :3]
+    norms = np.linalg.norm(r, axis=0, keepdims=True)
+    norms[norms == 0] = 1.0
+    r = r / norms
+    return float(np.arctan2(r[0, 2], r[2, 2]))
+
+
+def frontalize_yaw(points: np.ndarray, yaw_rad: float) -> np.ndarray:
+    """Inverse Y-rotation about the nose: undo the yaw turn in 3D instead
+    of rejecting the frame. 2D deroll stays for roll; this covers yaw."""
+    out = points.copy().astype(float)
+    center = out[NOSE_TIP].copy()
+    c, s = np.cos(-yaw_rad), np.sin(-yaw_rad)
+    v = out - center
+    out[:, 0] = c * v[:, 0] + s * v[:, 2] + center[0]
+    out[:, 2] = -s * v[:, 0] + c * v[:, 2] + center[2]
+    return out.astype(np.float32)
+
+
+def normalize_frame_3d(points: np.ndarray,
+                       matrix: np.ndarray | None) -> tuple[np.ndarray, dict]:
+    """normalize_frame plus 3D yaw frontalization when the pose matrix is
+    available. Falls back to the 2D path (same contract) when it is not,
+    so old callers and logs stay comparable."""
+    if matrix is None:
+        norm, info = normalize_frame(points)
+        info["yaw_deg_matrix"] = None
+        return norm, info
+    yaw = yaw_from_matrix(matrix)
+    frontal = frontalize_yaw(points, yaw)
+    norm, info = normalize_frame(frontal)
+    info["yaw_deg_matrix"] = round(float(np.degrees(yaw)), 1)
+    return norm, info

@@ -18,14 +18,22 @@ Keys: q = quit, r = re-take rest baseline.
 import argparse
 import csv
 import time
+from collections import deque
 from datetime import datetime
 from pathlib import Path
+from statistics import median
 
 import cv2
 import numpy as np
 
 from src.capture import REST_SECONDS, open_camera
-from src.index import SYMMETRIC_TOL, build_rest_index, gesture_score, smile_index
+from src.index import (
+    DYN_TOL,
+    build_rest_index,
+    dynamic_asymmetry,
+    gesture_score,
+    smile_index,
+)
 from src.landmarks import (
     CHIN,
     EYES,
@@ -34,8 +42,13 @@ from src.landmarks import (
     NOSE_TIP,
     RIGHT_EYE_OUTER,
 )
-from src.mesh import create_landmarker, extract_landmarks
-from src.normalize import interocular, normalize_frame
+from src.mesh import create_landmarker, extract_with_matrix
+from src.normalize import (
+    deroll,
+    interocular,
+    normalize_frame_3d,
+    normalize_scale,
+)
 
 MARKERS = {
     "eyes": (list(EYES.values()), (255, 255, 0)),
@@ -67,7 +80,11 @@ def draw_text(frame: np.ndarray, lines: list[str]) -> np.ndarray:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--headless", type=float, default=0)
+    parser.add_argument("--label", default="",
+                        help="test label written into every CSV row "
+                             "(e.g. rest-yaw, smile-frontal)")
     args = parser.parse_args()
+    label = args.label
 
     cap = open_camera()
     landmarker = create_landmarker()
@@ -77,14 +94,19 @@ def main() -> None:
     log_path.parent.mkdir(exist_ok=True)
     log_file = open(log_path, "w", newline="")
     log = csv.writer(log_file)
-    log.writerow(["t", "roll_deg", "yaw_proxy", "accepted", "rejected",
-                  "asymmetry", "angle_diff_deg", "gesture", "interocular_norm"])
+    log.writerow(["label", "t", "roll_deg", "yaw_proxy", "yaw_deg_matrix",
+                  "accepted", "rejected", "dynamic", "asymmetry",
+                  "angle_diff_deg", "gesture", "interocular_norm"])
     print(f"[demo] logging to {log_path}")
 
     rest_meshes: list[np.ndarray] = []
     rest_until = time.time() + REST_SECONDS
     rest_index: dict | None = None
+    rest_mesh: np.ndarray | None = None
     rest_ready = False
+    window: deque[float] = deque(maxlen=5)  # temporal smoothing: status
+    # follows the median of the last 5 dynamic values, so one noisy frame
+    # cannot flip OK to CHECK on its own.
     print(f"[demo] rest baseline ({REST_SECONDS}s, stay still, neutral face)...")
 
     fps_ts: list[float] = []
@@ -98,11 +120,11 @@ def main() -> None:
             last_ms = ms
             fps_ts.append(t)
 
-            pts = extract_landmarks(frame, landmarker, ms)
+            pts, matrix = extract_with_matrix(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
-                log.writerow([round(t, 3), "", "", False, "no-face",
-                              "", "", "", ""])
+                log.writerow([label, round(t, 3), "", "", "", False,
+                              "no-face", "", "", "", "", ""])
             else:
                 if t < rest_until:
                     rest_meshes.append(pts)
@@ -110,27 +132,43 @@ def main() -> None:
                 else:
                     if not rest_ready and rest_meshes:
                         rest_index = build_rest_index(rest_meshes)
+                        rest_mesh = np.mean(
+                            np.stack([normalize_scale(deroll(m))
+                                      for m in rest_meshes]), axis=0)
                         rest_ready = True
                         print(f"[demo] rest ready: {rest_index}")
-                    norm, info = normalize_frame(pts)
+                    norm, info = normalize_frame_3d(pts, matrix)
                     if not info["accepted"]:
                         lines = [f"pose out of range ({info['rejected']}: "
                                  f"roll {info['roll_deg']:.0f}d, yaw {info['yaw_proxy']:.2f})"]
-                        log.writerow([round(t, 3), round(info["roll_deg"], 1),
-                                      round(info["yaw_proxy"], 3), False,
-                                      info["rejected"], "", "", "", ""])
+                        log.writerow([label, round(t, 3),
+                                      round(info["roll_deg"], 1),
+                                      round(info["yaw_proxy"], 3),
+                                      info["yaw_deg_matrix"], False,
+                                      info["rejected"], "", "", "", "", ""])
                     else:
                         idx = smile_index(norm)
                         g = gesture_score(idx, rest_index) if rest_index else 0.0
-                        status = "OK" if idx["asymmetry"] < SYMMETRIC_TOL else "CHECK"
+                        if rest_mesh is not None:
+                            dyn = dynamic_asymmetry(norm, rest_mesh)
+                        else:
+                            dyn = {"move_left": 0.0, "move_right": 0.0,
+                                   "dynamic": 0.0, "status": "OK"}
+                        window.append(dyn["dynamic"])
+                        med = round(median(window), 4)
+                        status = "OK" if med < DYN_TOL else "CHECK"
                         lines = [
-                            f"asymmetry: {idx['asymmetry']} [{status}]",
-                            f"weaker: {idx['weaker_side']}  gesture: {g}",
+                            f"dyn: {dyn['dynamic']} (med {med}) [{status}]",
+                            f"L {dyn['move_left']} R {dyn['move_right']}  "
+                            f"gesture: {g}",
                         ]
-                        log.writerow([round(t, 3), round(info["roll_deg"], 1),
-                                      round(info["yaw_proxy"], 3), True, "",
-                                      idx["asymmetry"], idx["angle_diff_deg"], g,
-                                      round(interocular(pts), 1)])
+                        log.writerow([label, round(t, 3),
+                                      round(info["roll_deg"], 1),
+                                      round(info["yaw_proxy"], 3),
+                                      info["yaw_deg_matrix"], True, "",
+                                      dyn["dynamic"], idx["asymmetry"],
+                                      idx["angle_diff_deg"], g,
+                                      round(interocular(pts), 4)])
                     frame = draw_markers(frame, pts)
 
             if args.headless:

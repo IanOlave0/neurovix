@@ -25,6 +25,9 @@ from src.landmarks import MOUTH_LEFT, MOUTH_RIGHT, NOSE_TIP
 from src.normalize import deroll, normalize_scale
 
 SYMMETRIC_TOL = 0.02  # below this half-width gap: "symmetric" (tune in Phase 1)
+DYN_TOL = 0.05  # dynamic-asymmetry CHECK threshold. PLACEHOLDER: calibrate
+# against rest-jitter logs (static noise floor ~0.01-0.03 compounds ~1.4x in
+# differences). Do not trust until calibrated.
 
 
 def mouth_half_widths(pts: np.ndarray) -> tuple[float, float]:
@@ -66,6 +69,25 @@ def smile_index(pts: np.ndarray) -> dict:
 def gesture_score(smile: dict, rest: dict) -> float:
     """The clinical signal: smile asymmetry MINUS rest asymmetry."""
     return round(smile["asymmetry"] - rest["asymmetry"], 4)
+
+
+def dynamic_asymmetry(smile_pts: np.ndarray, rest_pts: np.ndarray) -> dict:
+    """Per-side movement comparison: how far each corner TRAVELED from its
+    own rest position, then the difference between sides.
+
+    Static index asks "is the mouth asymmetric NOW" (confounded by natural
+    rest asymmetry + pose). Dynamic asks "did both sides RESPOND equally" —
+    the actual palsy signal. Both inputs must be normalized meshes.
+    """
+    move_l = float(np.linalg.norm(smile_pts[MOUTH_LEFT, :2] - rest_pts[MOUTH_LEFT, :2]))
+    move_r = float(np.linalg.norm(smile_pts[MOUTH_RIGHT, :2] - rest_pts[MOUTH_RIGHT, :2]))
+    gap = abs(move_l - move_r)
+    return {
+        "move_left": round(move_l, 4),
+        "move_right": round(move_r, 4),
+        "dynamic": round(gap, 4),
+        "status": "OK" if gap < DYN_TOL else "CHECK",
+    }
 
 
 def build_rest_index(meshes: list[np.ndarray]) -> dict:
