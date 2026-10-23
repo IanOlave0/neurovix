@@ -94,7 +94,8 @@ def main() -> None:
     log_path.parent.mkdir(exist_ok=True)
     log_file = open(log_path, "w", newline="")
     log = csv.writer(log_file)
-    log.writerow(["label", "t", "roll_deg", "yaw_proxy", "yaw_deg_matrix",
+    log.writerow(["label", "t", "roll_deg", "yaw_proxy", "yaw_proxy_raw",
+                  "yaw_deg_matrix",
                   "accepted", "rejected", "dynamic", "asymmetry",
                   "angle_diff_deg", "gesture", "interocular_norm"])
     print(f"[demo] logging to {log_path}")
@@ -123,7 +124,7 @@ def main() -> None:
             pts, matrix = extract_with_matrix(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
-                log.writerow([label, round(t, 3), "", "", "", False,
+                log.writerow([label, round(t, 3), "", "", "", "", False,
                               "no-face", "", "", "", "", ""])
             else:
                 if t < rest_until:
@@ -144,6 +145,7 @@ def main() -> None:
                         log.writerow([label, round(t, 3),
                                       round(info["roll_deg"], 1),
                                       round(info["yaw_proxy"], 3),
+                                      info.get("yaw_proxy_raw", ""),
                                       info["yaw_deg_matrix"], False,
                                       info["rejected"], "", "", "", "", ""])
                     else:
@@ -165,6 +167,7 @@ def main() -> None:
                         log.writerow([label, round(t, 3),
                                       round(info["roll_deg"], 1),
                                       round(info["yaw_proxy"], 3),
+                                      info.get("yaw_proxy_raw", ""),
                                       info["yaw_deg_matrix"], True, "",
                                       dyn["dynamic"], idx["asymmetry"],
                                       idx["angle_diff_deg"], g,

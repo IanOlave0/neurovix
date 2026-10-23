@@ -115,17 +115,50 @@ def frontalize_yaw(points: np.ndarray, yaw_rad: float) -> np.ndarray:
     return out.astype(np.float32)
 
 
+def frontalize_full(points: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    """Undo pose with the FULL 4x4 inverse: canonical ~= M^-1 @ detected.
+
+    Why not just the yaw angle: extracting one angle and re-applying a
+    hand-made rotation corrected one turn direction better than the other
+    (directional bias seen in logs). The full inverse handles yaw + roll +
+    pitch + translation uniformly, with no convention to get backwards —
+    inversion is inversion.
+
+    Why asymmetry survives: M is a rigid-ish fit (rotation/translation/
+    scale of the generic canonical model onto this face). It cannot encode
+    expression or palsy, so M^-1 removes pose/scale but keeps the subject's
+    own shape deviations — the signal. A test below pins exactly this.
+    """
+    m = np.asarray(matrix, dtype=float)
+    assert m.shape == (4, 4), f"expected 4x4 pose matrix, got {m.shape}"
+    homo = np.ones((len(points), 4))
+    homo[:, :3] = points[:, :3]
+    frontal = homo @ np.linalg.inv(m).T
+    w = frontal[:, 3:4]
+    w[w == 0] = 1.0
+    out = points.copy().astype(float)
+    out[:, :3] = frontal[:, :3] / w
+    return out.astype(np.float32)
+
+
 def normalize_frame_3d(points: np.ndarray,
                        matrix: np.ndarray | None) -> tuple[np.ndarray, dict]:
-    """normalize_frame plus 3D yaw frontalization when the pose matrix is
+    """normalize_frame plus full 3D frontalization when the pose matrix is
     available. Falls back to the 2D path (same contract) when it is not,
-    so old callers and logs stay comparable."""
+    so old callers and logs stay comparable.
+
+    yaw_proxy_raw = pose BEFORE frontalization (diagnostic: how far the
+    head really turned). yaw_proxy = residual AFTER (what the index sees).
+    """
+    raw_yaw = yaw_proxy(points)
     if matrix is None:
         norm, info = normalize_frame(points)
+        info["yaw_proxy_raw"] = round(raw_yaw, 4)
         info["yaw_deg_matrix"] = None
         return norm, info
     yaw = yaw_from_matrix(matrix)
-    frontal = frontalize_yaw(points, yaw)
+    frontal = frontalize_full(points, matrix)
     norm, info = normalize_frame(frontal)
+    info["yaw_proxy_raw"] = round(raw_yaw, 4)
     info["yaw_deg_matrix"] = round(float(np.degrees(yaw)), 1)
     return norm, info

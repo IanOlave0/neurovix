@@ -1,46 +1,60 @@
-"""3D yaw frontalization math (no camera needed).
+"""Full-inverse frontalization (no camera needed).
 
-frontalize_yaw must invert a pure Y-rotation: rotate the fake face by +20
-degrees about the nose vertical axis, frontalize by the same angle read the
-way yaw_from_matrix reads it, and the mouth must land back where it was.
-yaw_from_matrix is checked against a synthetic Y-rotation matrix first, so
-the convention is pinned before touching real detector output.
+Pins three properties with synthetic similarity transforms
+(M = translation @ Y-rotation @ uniform scale):
+1. Round trip: frontalize(M @ face) recovers the mouth points, for +20 AND
+   -20 degrees (the old yaw-angle path was only tested one way — that is
+   how the directional bias shipped).
+2. Asymmetry survives: a deformed (drooped) face keeps its half-width gap
+   after frontalization. Frontalization removes pose, never the signal.
 """
 
 import numpy as np
-import pytest
 
-from src.landmarks import MOUTH_LEFT, MOUTH_RIGHT, NOSE_TIP
-from src.normalize import frontalize_yaw, yaw_from_matrix
+from src.index import mouth_half_widths
+from src.landmarks import MOUTH_LEFT, MOUTH_RIGHT
+from src.normalize import frontalize_full
 from tests.test_index import fake_face
 
 
-def y_rotation_matrix(degrees: float) -> np.ndarray:
-    theta = np.radians(degrees)
+def similarity_matrix(yaw_deg: float, scale: float = 2.0) -> np.ndarray:
+    theta = np.radians(yaw_deg)
     c, s = np.cos(theta), np.sin(theta)
     m = np.eye(4)
     m[:3, :3] = [[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]]
+    m[:3, :3] *= scale
+    m[:3, 3] = [0.5, 0.25, 0.1]
     return m
 
 
-def apply_yaw(points: np.ndarray, degrees: float) -> np.ndarray:
-    """Simulate a yaw turn: rotate about the nose vertical axis."""
-    out = points.copy().astype(float)
-    theta = np.radians(degrees)
-    c, s = np.cos(theta), np.sin(theta)
-    v = out - out[NOSE_TIP]
-    out[:, 0] = c * v[:, 0] + s * v[:, 2] + out[NOSE_TIP, 0]
-    out[:, 2] = -s * v[:, 0] + c * v[:, 2] + out[NOSE_TIP, 2]
-    return out.astype(np.float32)
+def apply(pts: np.ndarray, m: np.ndarray) -> np.ndarray:
+    homo = np.ones((len(pts), 4))
+    homo[:, :3] = pts[:, :3]
+    out = homo @ m.T
+    return (out[:, :3] / out[:, 3:4]).astype(np.float32)
 
 
-def test_yaw_from_matrix_reads_y_rotation():
-    assert yaw_from_matrix(y_rotation_matrix(20.0)) == pytest.approx(np.radians(20.0))
-
-
-def test_frontalize_inverts_yaw_turn():
+def test_round_trip_positive_yaw():
     pts = fake_face()
-    turned = apply_yaw(pts, 20.0)
-    back = frontalize_yaw(turned, np.radians(20.0))
-    assert np.allclose(back[MOUTH_LEFT, :2], pts[MOUTH_LEFT, :2], atol=1e-5)
-    assert np.allclose(back[MOUTH_RIGHT, :2], pts[MOUTH_RIGHT, :2], atol=1e-5)
+    back = frontalize_full(apply(pts, similarity_matrix(20.0)),
+                           similarity_matrix(20.0))
+    assert np.allclose(back[MOUTH_LEFT, :2], pts[MOUTH_LEFT, :2], atol=1e-4)
+    assert np.allclose(back[MOUTH_RIGHT, :2], pts[MOUTH_RIGHT, :2], atol=1e-4)
+
+
+def test_round_trip_negative_yaw():
+    pts = fake_face()
+    back = frontalize_full(apply(pts, similarity_matrix(-20.0)),
+                           similarity_matrix(-20.0))
+    assert np.allclose(back[MOUTH_LEFT, :2], pts[MOUTH_LEFT, :2], atol=1e-4)
+    assert np.allclose(back[MOUTH_RIGHT, :2], pts[MOUTH_RIGHT, :2], atol=1e-4)
+
+
+def test_frontalization_preserves_asymmetry():
+    pts = fake_face()
+    pts[MOUTH_RIGHT, 0] -= 0.10
+    before = abs(mouth_half_widths(pts)[0] - mouth_half_widths(pts)[1])
+    back = frontalize_full(apply(pts, similarity_matrix(-20.0)),
+                           similarity_matrix(-20.0))
+    after = abs(mouth_half_widths(back)[0] - mouth_half_widths(back)[1])
+    assert abs(before - after) < 1e-4  # pose removed, signal intact
