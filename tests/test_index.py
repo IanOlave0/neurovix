@@ -101,3 +101,29 @@ def test_dynamic_asymmetry_detects_one_sided_movement():
     assert dyn["move_left"] == 0.0
     assert dyn["dynamic"] == 0.10
     assert dyn["status"] == "CHECK"
+
+
+def test_dynamic_status_is_proportional_not_absolute():
+    # Big symmetric smile: large absolute travel, zero proportion -> OK.
+    # (Old absolute status would CHECK a healthy big smile.)
+    from src.index import dynamic_asymmetry
+
+    rest = fake_face()
+    smile = fake_face()
+    smile[MOUTH_LEFT, 0] -= 0.15
+    smile[MOUTH_RIGHT, 0] += 0.15
+    dyn = dynamic_asymmetry(smile, rest)
+    assert dyn["move_left"] == dyn["move_right"] == 0.15
+    assert dyn["dynamic"] == 0.0
+    assert dyn["dyn_rel"] == 0.0
+    assert dyn["status"] == "OK"
+
+
+def test_dynamic_ignores_sub_movement_noise():
+    from src.index import dynamic_asymmetry
+
+    rest = fake_face()
+    still = fake_face()
+    still[MOUTH_LEFT, 0] -= 0.01
+    dyn = dynamic_asymmetry(still, rest)
+    assert dyn["status"] == "OK"

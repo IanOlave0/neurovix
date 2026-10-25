@@ -28,7 +28,7 @@ import numpy as np
 
 from src.capture import REST_SECONDS, open_camera
 from src.index import (
-    DYN_TOL,
+    DYN_REL_TOL,
     build_rest_index,
     dynamic_asymmetry,
     gesture_score,
@@ -49,6 +49,7 @@ from src.normalize import (
     normalize_frame,
     normalize_scale,
     roll_deg,
+    yaw_from_matrix,
 )
 
 MARKERS = {
@@ -96,16 +97,19 @@ def main() -> None:
     log_file = open(log_path, "w", newline="")
     log = csv.writer(log_file)
     log.writerow(["label", "t", "roll_deg", "roll_rel_deg", "yaw_proxy",
-                  "yaw_deg_matrix",
-                  "accepted", "rejected", "dynamic", "asymmetry",
-                  "angle_diff_deg", "gesture", "interocular_px"])
+                  "yaw_deg_matrix", "rest_yaw_deg",
+                  "accepted", "rejected", "dynamic", "dyn_rel",
+                  "asymmetry", "angle_diff_deg", "gesture",
+                  "interocular_px"])
     print(f"[demo] logging to {log_path}")
 
     rest_meshes: list[np.ndarray] = []
+    rest_mats: list = []
     rest_until = time.time() + REST_SECONDS
     rest_index: dict | None = None
     rest_mesh: np.ndarray | None = None
     rest_roll: float | None = None
+    rest_yaw: float | None = None
     rest_ready = False
     window: deque[float] = deque(maxlen=5)  # temporal smoothing: status
     # follows the median of the last 5 dynamic values, so one noisy frame
@@ -126,11 +130,12 @@ def main() -> None:
             pts, matrix = extract_with_matrix(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
-                log.writerow([label, round(t, 3), "", "", "", "", False,
-                              "no-face", "", "", "", "", ""])
+                log.writerow([label, round(t, 3), "", "", "", "", "", False,
+                              "no-face", "", "", "", "", "", ""])
             else:
                 if t < rest_until:
                     rest_meshes.append(pts)
+                    rest_mats.append(matrix)
                     lines = [f"recording rest... {len(rest_meshes)}"]
                 else:
                     if not rest_ready and rest_meshes:
@@ -140,10 +145,15 @@ def main() -> None:
                                       for m in rest_meshes]), axis=0)
                         rest_roll = float(np.median(
                             [roll_deg(m) for m in rest_meshes]))
+                        mat_yaws = [float(np.degrees(yaw_from_matrix(m)))
+                                    for m in rest_mats if m is not None]
+                        rest_yaw = float(np.median(mat_yaws)) if mat_yaws else None
                         rest_ready = True
-                        print(f"[demo] rest ready: {rest_index} rest_roll={rest_roll:.1f}")
+                        print(f"[demo] rest ready: {rest_index} "
+                              f"rest_roll={rest_roll:.1f} rest_yaw={rest_yaw}")
                     norm, info = normalize_frame(pts, matrix=matrix,
-                                                 rest_roll=rest_roll)
+                                                 rest_roll=rest_roll,
+                                                 rest_yaw=rest_yaw)
                     if not info["accepted"]:
                         lines = [f"pose out of range ({info['rejected']}: "
                                  f"roll {info['roll_deg']:.0f}d, yaw {info['yaw_proxy']:.2f})"]
@@ -152,8 +162,10 @@ def main() -> None:
                         log.writerow([label, round(t, 3),
                                       round(info["roll_deg"], 1), rel,
                                       round(info["yaw_proxy"], 3),
-                                      info["yaw_deg_matrix"], False,
-                                      info["rejected"], "", "", "", "", ""])
+                                      info["yaw_deg_matrix"],
+                                      "" if rest_yaw is None else round(rest_yaw, 1),
+                                      False,
+                                      info["rejected"], "", "", "", "", "", ""])
                     else:
                         idx = smile_index(norm)
                         g = gesture_score(idx, rest_index) if rest_index else 0.0
@@ -162,11 +174,11 @@ def main() -> None:
                         else:
                             dyn = {"move_left": 0.0, "move_right": 0.0,
                                    "dynamic": 0.0, "status": "OK"}
-                        window.append(dyn["dynamic"])
+                        window.append(dyn["dyn_rel"])
                         med = round(median(window), 4)
-                        status = "OK" if med < DYN_TOL else "CHECK"
+                        status = "OK" if med < DYN_REL_TOL else "CHECK"
                         lines = [
-                            f"dyn: {dyn['dynamic']} (med {med}) [{status}]",
+                            f"rel: {dyn['dyn_rel']} (med {med}) [{status}]",
                             f"L {dyn['move_left']} R {dyn['move_right']}  "
                             f"gesture: {g}",
                         ]
@@ -175,8 +187,11 @@ def main() -> None:
                                       round(info["roll_deg"] - rest_roll, 1)
                                       if rest_roll is not None else "",
                                       round(info["yaw_proxy"], 3),
-                                      info["yaw_deg_matrix"], True, "",
-                                      dyn["dynamic"], idx["asymmetry"],
+                                      info["yaw_deg_matrix"],
+                                      "" if rest_yaw is None else round(rest_yaw, 1),
+                                      True, "",
+                                      dyn["dynamic"], dyn["dyn_rel"],
+                                      idx["asymmetry"],
                                       idx["angle_diff_deg"], g,
                                       round(interocular(pts), 1)])
                     frame = draw_markers(frame, pts)
@@ -190,7 +205,8 @@ def main() -> None:
                 if key == ord("q"):
                     break
                 if key == ord("r"):
-                    rest_meshes, rest_ready = [], False
+                    rest_meshes, rest_mats = [], []
+                    rest_ready, rest_yaw = False, None
                     rest_until = time.time() + REST_SECONDS
                     print("[demo] re-taking rest baseline...")
     finally:

@@ -24,7 +24,11 @@ from src.landmarks import (
 )
 
 YAW_EXCLUDE = 0.25  # proxy fallback (no matrix) -> frame rejected
-YAW_EXCLUDE_DEG = 20.0  # matrix yaw in real degrees -> rejected. PLACEHOLDER.
+YAW_EXCLUDE_DEG = 20.0  # absolute outer guard: beyond this the projection
+# is too distorted no matter the rest posture.
+YAW_REL_DEG = 12.0  # excursion from the SUBJECT'S OWN rest yaw. Same lesson
+# as roll: a subject resting at -8 deg has 28 deg of room one way and 12
+# the other under an absolute gate. PLACEHOLDER: calibrate with labeled logs.
 ROLL_EXCLUDE_DEG = 15.0  # absolute outer guard: beyond this, no correction
 # is even attempted (pure 2D leveling cannot undo real 3D tilt).
 ROLL_REL_DEG = 10.0  # tilt RELATIVE to the subject's own rest posture.
@@ -75,7 +79,8 @@ def yaw_proxy(points: np.ndarray) -> float:
 
 def normalize_frame(points: np.ndarray,
                       matrix: np.ndarray | None = None,
-                      rest_roll: float | None = None) -> tuple[np.ndarray, dict]:
+                      rest_roll: float | None = None,
+                      rest_yaw: float | None = None) -> tuple[np.ndarray, dict]:
     """Full pipeline for one mesh: scale -> deroll -> pose gates.
 
     Exclusion-only by design (protocol 3.3): geometric correction of real
@@ -83,11 +88,13 @@ def normalize_frame(points: np.ndarray,
     amplifying yaw ~2x (matrix lives in metric 3D space, our points in
     image space). Gates, from strongest signal to weakest:
 
-    - yaw: matrix angle in real degrees when available, else the proxy.
     - roll absolute: outer guard against extreme tilt.
     - roll relative: excursion from the SUBJECT'S OWN rest posture
       (a subject resting at -9 deg has almost no room under an absolute
       gate — the gate must measure from their rest, not the horizon).
+    - yaw: matrix angle in real degrees when available (absolute outer
+      guard + excursion from the subject's own rest yaw), proxy fallback
+      without matrix.
 
     Returns (normalized points, info). Rejected frames must be dropped by
     the caller, never silently corrected.
@@ -100,6 +107,8 @@ def normalize_frame(points: np.ndarray,
     if yaw_deg is not None:
         if abs(yaw_deg) > YAW_EXCLUDE_DEG:
             reason = "yaw"
+        elif rest_yaw is not None and abs(yaw_deg - rest_yaw) > YAW_REL_DEG:
+            reason = "yaw-rel"
     elif abs(yaw) > YAW_EXCLUDE:
         reason = "yaw"
     if reason is None and abs(roll) > ROLL_EXCLUDE_DEG:

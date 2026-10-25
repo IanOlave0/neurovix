@@ -25,9 +25,11 @@ from src.landmarks import MOUTH_LEFT, MOUTH_RIGHT, NOSE_TIP
 from src.normalize import deroll, normalize_scale
 
 SYMMETRIC_TOL = 0.02  # below this half-width gap: "symmetric" (tune in Phase 1)
-DYN_TOL = 0.05  # dynamic-asymmetry CHECK threshold. PLACEHOLDER: calibrate
-# against rest-jitter logs (static noise floor ~0.01-0.03 compounds ~1.4x in
-# differences). Do not trust until calibrated.
+MIN_MOVE = 0.05  # total corner travel below this = noise floor, not a gesture.
+DYN_REL_TOL = 0.30  # CHECK when one side moves 30%+ more than the other.
+# PLACEHOLDERS: calibrate against labeled normal-smile logs. Rationale for
+# relative over absolute: a big healthy smile accumulates bigger absolute
+# side gaps by pure size — the honest unit is proportion, not eye-widths.
 
 
 def mouth_half_widths(pts: np.ndarray) -> tuple[float, float]:
@@ -82,11 +84,17 @@ def dynamic_asymmetry(smile_pts: np.ndarray, rest_pts: np.ndarray) -> dict:
     move_l = float(np.linalg.norm(smile_pts[MOUTH_LEFT, :2] - rest_pts[MOUTH_LEFT, :2]))
     move_r = float(np.linalg.norm(smile_pts[MOUTH_RIGHT, :2] - rest_pts[MOUTH_RIGHT, :2]))
     gap = abs(move_l - move_r)
+    total = move_l + move_r
+    # Proportional asymmetry: comparable across small and big smiles.
+    # Guarded by MIN_MOVE — near rest, ratios explode on noise.
+    dyn_rel = (gap / total) if total >= MIN_MOVE else 0.0
+    status = "OK" if dyn_rel < DYN_REL_TOL else "CHECK"
     return {
         "move_left": round(move_l, 4),
         "move_right": round(move_r, 4),
         "dynamic": round(gap, 4),
-        "status": "OK" if gap < DYN_TOL else "CHECK",
+        "dyn_rel": round(dyn_rel, 4),
+        "status": status,
     }
 
 

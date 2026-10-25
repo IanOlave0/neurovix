@@ -42,6 +42,18 @@ def test_matrix_yaw_gate_accepts_mild_turn():
     assert info["accepted"] is True
 
 
+def test_yaw_gate_measures_from_rest():
+    # Rest posture turned -8 deg: +4 deg of further turn must pass
+    # (12 excursion budget), -8 more must trip yaw-rel, not the horizon.
+    _, info = normalize_frame(fake_face(), matrix=y_rotation_matrix_4x4(4.0),
+                              rest_yaw=-8.0)
+    assert info["accepted"] is True
+    _, info = normalize_frame(fake_face(), matrix=y_rotation_matrix_4x4(5.0),
+                              rest_yaw=-8.0)
+    assert info["accepted"] is False
+    assert info["rejected"] == "yaw-rel"
+
+
 def test_roll_gate_measures_from_rest_not_horizon():
     rest_roll = 0.0  # frontal rest
     _, info = normalize_frame(tilt(fake_face(), ROLL_REL_DEG + 2.0),
