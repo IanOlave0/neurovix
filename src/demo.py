@@ -98,8 +98,8 @@ def main() -> None:
     log = csv.writer(log_file)
     log.writerow(["label", "t", "roll_deg", "roll_rel_deg", "yaw_proxy",
                   "yaw_deg_matrix", "rest_yaw_deg",
-                  "accepted", "rejected", "dynamic", "dyn_rel",
-                  "asymmetry", "angle_diff_deg", "gesture",
+                  "accepted", "rejected", "metric_valid", "dynamic",
+                  "dyn_rel", "asymmetry", "angle_diff_deg", "gesture",
                   "interocular_px"])
     print(f"[demo] logging to {log_path}")
 
@@ -131,7 +131,7 @@ def main() -> None:
             if pts is None:
                 lines = ["no face detected"]
                 log.writerow([label, round(t, 3), "", "", "", "", "", False,
-                              "no-face", "", "", "", "", "", ""])
+                              "no-face", "", "", "", "", "", "", "", ""])
             else:
                 if t < rest_until:
                     rest_meshes.append(pts)
@@ -165,35 +165,49 @@ def main() -> None:
                                       info["yaw_deg_matrix"],
                                       "" if rest_yaw is None else round(rest_yaw, 1),
                                       False,
-                                      info["rejected"], "", "", "", "", "", ""])
+                                      info["rejected"], "", "", "", "",
+                                      "", "", ""])
                     else:
                         idx = smile_index(norm)
                         g = gesture_score(idx, rest_index) if rest_index else 0.0
-                        if rest_mesh is not None:
+                        common = [label, round(t, 3),
+                                  round(info["roll_deg"], 1),
+                                  round(info["roll_deg"] - rest_roll, 1)
+                                  if rest_roll is not None else "",
+                                  round(info["yaw_proxy"], 3),
+                                  info["yaw_deg_matrix"],
+                                  "" if rest_yaw is None else round(rest_yaw, 1)]
+                        if not info["metric_valid"]:
+                            # Two-tier honesty: within 4-12 deg excursion the
+                            # frame is valid but the displacement metric is
+                            # pose-contaminated during gesture. Announce it —
+                            # never a CHECK the user learns to ignore.
+                            lines = ["pose-limited: face the camera",
+                                     f"(yaw {info['yaw_deg_matrix']}d, rest {rest_yaw}d)"]
+                            log.writerow(common + [True, "", False, "", "", "",
+                                                   "", "", g,
+                                                   round(interocular(pts), 1)])
+                        elif rest_mesh is not None:
                             dyn = dynamic_asymmetry(norm, rest_mesh)
+                            window.append(dyn["dyn_rel"])
+                            med = round(median(window), 4)
+                            status = "OK" if med < DYN_REL_TOL else "CHECK"
+                            lines = [
+                                f"rel: {dyn['dyn_rel']} (med {med}) [{status}]",
+                                f"L {dyn['move_left']} R {dyn['move_right']}  "
+                                f"gesture: {g}",
+                            ]
+                            log.writerow(common + [True, "", True,
+                                                    dyn["dynamic"],
+                                                    dyn["dyn_rel"],
+                                                    idx["asymmetry"],
+                                                    idx["angle_diff_deg"], g,
+                                                    round(interocular(pts), 1)])
                         else:
-                            dyn = {"move_left": 0.0, "move_right": 0.0,
-                                   "dynamic": 0.0, "status": "OK"}
-                        window.append(dyn["dyn_rel"])
-                        med = round(median(window), 4)
-                        status = "OK" if med < DYN_REL_TOL else "CHECK"
-                        lines = [
-                            f"rel: {dyn['dyn_rel']} (med {med}) [{status}]",
-                            f"L {dyn['move_left']} R {dyn['move_right']}  "
-                            f"gesture: {g}",
-                        ]
-                        log.writerow([label, round(t, 3),
-                                      round(info["roll_deg"], 1),
-                                      round(info["roll_deg"] - rest_roll, 1)
-                                      if rest_roll is not None else "",
-                                      round(info["yaw_proxy"], 3),
-                                      info["yaw_deg_matrix"],
-                                      "" if rest_yaw is None else round(rest_yaw, 1),
-                                      True, "",
-                                      dyn["dynamic"], dyn["dyn_rel"],
-                                      idx["asymmetry"],
-                                      idx["angle_diff_deg"], g,
-                                      round(interocular(pts), 1)])
+                            lines = ["waiting for rest baseline"]
+                            log.writerow(common + [True, "", True, "", "", "",
+                                                   "", "", g,
+                                                   round(interocular(pts), 1)])
                     frame = draw_markers(frame, pts)
 
             if args.headless:
