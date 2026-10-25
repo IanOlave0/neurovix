@@ -46,8 +46,9 @@ from src.mesh import create_landmarker, extract_with_matrix
 from src.normalize import (
     deroll,
     interocular,
-    normalize_frame_3d,
+    normalize_frame,
     normalize_scale,
+    roll_deg,
 )
 
 MARKERS = {
@@ -94,16 +95,17 @@ def main() -> None:
     log_path.parent.mkdir(exist_ok=True)
     log_file = open(log_path, "w", newline="")
     log = csv.writer(log_file)
-    log.writerow(["label", "t", "roll_deg", "yaw_proxy", "yaw_proxy_raw",
+    log.writerow(["label", "t", "roll_deg", "roll_rel_deg", "yaw_proxy",
                   "yaw_deg_matrix",
                   "accepted", "rejected", "dynamic", "asymmetry",
-                  "angle_diff_deg", "gesture", "interocular_norm"])
+                  "angle_diff_deg", "gesture", "interocular_px"])
     print(f"[demo] logging to {log_path}")
 
     rest_meshes: list[np.ndarray] = []
     rest_until = time.time() + REST_SECONDS
     rest_index: dict | None = None
     rest_mesh: np.ndarray | None = None
+    rest_roll: float | None = None
     rest_ready = False
     window: deque[float] = deque(maxlen=5)  # temporal smoothing: status
     # follows the median of the last 5 dynamic values, so one noisy frame
@@ -136,16 +138,20 @@ def main() -> None:
                         rest_mesh = np.mean(
                             np.stack([normalize_scale(deroll(m))
                                       for m in rest_meshes]), axis=0)
+                        rest_roll = float(np.median(
+                            [roll_deg(m) for m in rest_meshes]))
                         rest_ready = True
-                        print(f"[demo] rest ready: {rest_index}")
-                    norm, info = normalize_frame_3d(pts, matrix)
+                        print(f"[demo] rest ready: {rest_index} rest_roll={rest_roll:.1f}")
+                    norm, info = normalize_frame(pts, matrix=matrix,
+                                                 rest_roll=rest_roll)
                     if not info["accepted"]:
                         lines = [f"pose out of range ({info['rejected']}: "
                                  f"roll {info['roll_deg']:.0f}d, yaw {info['yaw_proxy']:.2f})"]
+                        rel = "" if rest_roll is None else round(
+                            info["roll_deg"] - rest_roll, 1)
                         log.writerow([label, round(t, 3),
-                                      round(info["roll_deg"], 1),
+                                      round(info["roll_deg"], 1), rel,
                                       round(info["yaw_proxy"], 3),
-                                      info.get("yaw_proxy_raw", ""),
                                       info["yaw_deg_matrix"], False,
                                       info["rejected"], "", "", "", "", ""])
                     else:
@@ -166,12 +172,13 @@ def main() -> None:
                         ]
                         log.writerow([label, round(t, 3),
                                       round(info["roll_deg"], 1),
+                                      round(info["roll_deg"] - rest_roll, 1)
+                                      if rest_roll is not None else "",
                                       round(info["yaw_proxy"], 3),
-                                      info.get("yaw_proxy_raw", ""),
                                       info["yaw_deg_matrix"], True, "",
                                       dyn["dynamic"], idx["asymmetry"],
                                       idx["angle_diff_deg"], g,
-                                      round(interocular(pts), 4)])
+                                      round(interocular(pts), 1)])
                     frame = draw_markers(frame, pts)
 
             if args.headless:

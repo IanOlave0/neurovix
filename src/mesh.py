@@ -1,8 +1,9 @@
 """Face mesh extraction: Tasks FaceLandmarker in VIDEO mode.
 
 Design contract (see docs/protocol.md, section 3.1, and risk R7):
-- Output is a (478, 3) float32 array of NORMALIZED landmarks (x, y in
-  [0, 1], z in the same scale) or None when no face is detected.
+- Output is a (478, 3) float32 array in PIXEL space (x*W, y*H, z*W)
+  or None when no face is detected. Pixel space keeps x and y in the same
+  units so downstream distances/angles are undistorted.
 - The first 468 points keep the canonical FaceMesh topology, so every index
   in `landmarks.py` stays valid; the last 10 are iris points we ignore.
 - VIDEO mode requires monotonically increasing timestamps in ms. We feed it
@@ -61,8 +62,10 @@ def extract_with_matrix(frame_bgr: np.ndarray,
     result = landmarker.detect_for_video(image, timestamp_ms)
     if not result.face_landmarks:
         return None, None
+    h, w = frame_bgr.shape[:2]
     pts = np.array(
-        [(lm.x, lm.y, lm.z) for lm in result.face_landmarks[0]],
+        [(lm.x * w, lm.y * h, lm.z * w)
+         for lm in result.face_landmarks[0]],
         dtype=np.float32,
     )
     assert pts.shape == (MESH_POINTS, 3), f"topology changed: {pts.shape}"
@@ -74,15 +77,13 @@ def extract_with_matrix(frame_bgr: np.ndarray,
 def extract_landmarks(frame_bgr: np.ndarray,
                       landmarker: vision.FaceLandmarker,
                       timestamp_ms: int) -> np.ndarray | None:
-    """One BGR frame + its capture timestamp -> (478, 3) or None."""
-    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-    result = landmarker.detect_for_video(image, timestamp_ms)
-    if not result.face_landmarks:
-        return None
-    pts = np.array(
-        [(lm.x, lm.y, lm.z) for lm in result.face_landmarks[0]],
-        dtype=np.float32,
-    )
-    assert pts.shape == (MESH_POINTS, 3), f"topology changed: {pts.shape}"
+    """One BGR frame + its capture timestamp -> (478, 3) PIXEL-space array
+    (x*W, y*H, z*W) or None when no face is detected.
+
+    Why pixels, not normalized: x and y arrive in different units (image
+    width vs. height). Every distance/angle computed on mixed units is
+    distorted by W/H (~1.33 on 640x480). Converting once, here, fixes all
+    downstream geometry. z shares x's scale, so z*W keeps it consistent.
+    """
+    pts, _ = extract_with_matrix(frame_bgr, landmarker, timestamp_ms)
     return pts

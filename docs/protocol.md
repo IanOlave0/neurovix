@@ -55,7 +55,11 @@ facial palsy discrimination over static asymmetry metrics?
 **Normalizations:**
 
 - Scale: interocular distance (or facial width)
-- Pose: roll/yaw correction (MediaPipe facial transformation matrix or stable-landmark estimation)
+- Pose: gates only, no geometric correction. Yaw gate from the pose
+  matrix in real degrees when available (proxy fallback); roll gate with
+  an absolute outer guard plus excursion relative to the subject's own
+  rest posture. Correction was tried and removed (evidence: 2x yaw
+  amplification); see risks.md R4.
 - Temporal: gesture-onset alignment by movement threshold
 
 ### 3.3 Exclusions

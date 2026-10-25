@@ -23,11 +23,14 @@ from src.landmarks import (
     RIGHT_EYE_OUTER,
 )
 
-YAW_EXCLUDE = 0.25  # |yaw proxy| above this -> frame rejected (tune in Phase 1)
-ROLL_EXCLUDE_DEG = 15.0  # |roll| above this -> frame rejected, not corrected.
-# 2D derotation cannot undo real 3D tilt (perspective + occlusion), and the
-# eye line it measures from degrades under tilt too. Initial value is a
-# placeholder: calibrate against logged roll-vs-asymmetry data (see demo).
+YAW_EXCLUDE = 0.25  # proxy fallback (no matrix) -> frame rejected
+YAW_EXCLUDE_DEG = 20.0  # matrix yaw in real degrees -> rejected. PLACEHOLDER.
+ROLL_EXCLUDE_DEG = 15.0  # absolute outer guard: beyond this, no correction
+# is even attempted (pure 2D leveling cannot undo real 3D tilt).
+ROLL_REL_DEG = 10.0  # tilt RELATIVE to the subject's own rest posture.
+# Rationale: a subject resting at roll -9 has ~2 degrees of room under an
+# absolute gate — the gate must measure excursion from THEIR rest, not from
+# the camera horizon. PLACEHOLDER: calibrate against labeled logs.
 
 
 def interocular(points: np.ndarray) -> float:
@@ -70,20 +73,41 @@ def yaw_proxy(points: np.ndarray) -> float:
     return (dl - dr) / interocular(points)
 
 
-def normalize_frame(points: np.ndarray) -> tuple[np.ndarray, dict]:
-    """Full pipeline for one mesh: scale -> deroll -> yaw gate.
+def normalize_frame(points: np.ndarray,
+                      matrix: np.ndarray | None = None,
+                      rest_roll: float | None = None) -> tuple[np.ndarray, dict]:
+    """Full pipeline for one mesh: scale -> deroll -> pose gates.
 
-    Returns (normalized points, info dict with roll_deg, yaw_proxy,
-    accepted). Rejected frames must be dropped by the caller, never
-    silently corrected (protocol 3.3)."""
+    Exclusion-only by design (protocol 3.3): geometric correction of real
+    3D pose was tried and REMOVED — evidence showed the full-matrix inverse
+    amplifying yaw ~2x (matrix lives in metric 3D space, our points in
+    image space). Gates, from strongest signal to weakest:
+
+    - yaw: matrix angle in real degrees when available, else the proxy.
+    - roll absolute: outer guard against extreme tilt.
+    - roll relative: excursion from the SUBJECT'S OWN rest posture
+      (a subject resting at -9 deg has almost no room under an absolute
+      gate — the gate must measure from their rest, not the horizon).
+
+    Returns (normalized points, info). Rejected frames must be dropped by
+    the caller, never silently corrected.
+    """
     yaw = yaw_proxy(points)
     roll = roll_deg(points)
+    yaw_deg = round(float(np.degrees(yaw_from_matrix(matrix))), 1) \
+        if matrix is not None else None
     reason = None
-    if abs(yaw) > YAW_EXCLUDE:
+    if yaw_deg is not None:
+        if abs(yaw_deg) > YAW_EXCLUDE_DEG:
+            reason = "yaw"
+    elif abs(yaw) > YAW_EXCLUDE:
         reason = "yaw"
-    elif abs(roll) > ROLL_EXCLUDE_DEG:
+    if reason is None and abs(roll) > ROLL_EXCLUDE_DEG:
         reason = "roll"
-    info = {"roll_deg": roll, "yaw_proxy": yaw,
+    if reason is None and rest_roll is not None \
+            and abs(roll - rest_roll) > ROLL_REL_DEG:
+        reason = "roll-rel"
+    info = {"roll_deg": roll, "yaw_proxy": yaw, "yaw_deg_matrix": yaw_deg,
             "accepted": reason is None, "rejected": reason}
     return normalize_scale(deroll(points)), info
 
@@ -103,62 +127,7 @@ def yaw_from_matrix(matrix: np.ndarray) -> float:
     return float(np.arctan2(r[0, 2], r[2, 2]))
 
 
-def frontalize_yaw(points: np.ndarray, yaw_rad: float) -> np.ndarray:
-    """Inverse Y-rotation about the nose: undo the yaw turn in 3D instead
-    of rejecting the frame. 2D deroll stays for roll; this covers yaw."""
-    out = points.copy().astype(float)
-    center = out[NOSE_TIP].copy()
-    c, s = np.cos(-yaw_rad), np.sin(-yaw_rad)
-    v = out - center
-    out[:, 0] = c * v[:, 0] + s * v[:, 2] + center[0]
-    out[:, 2] = -s * v[:, 0] + c * v[:, 2] + center[2]
-    return out.astype(np.float32)
-
-
-def frontalize_full(points: np.ndarray, matrix: np.ndarray) -> np.ndarray:
-    """Undo pose with the FULL 4x4 inverse: canonical ~= M^-1 @ detected.
-
-    Why not just the yaw angle: extracting one angle and re-applying a
-    hand-made rotation corrected one turn direction better than the other
-    (directional bias seen in logs). The full inverse handles yaw + roll +
-    pitch + translation uniformly, with no convention to get backwards —
-    inversion is inversion.
-
-    Why asymmetry survives: M is a rigid-ish fit (rotation/translation/
-    scale of the generic canonical model onto this face). It cannot encode
-    expression or palsy, so M^-1 removes pose/scale but keeps the subject's
-    own shape deviations — the signal. A test below pins exactly this.
-    """
-    m = np.asarray(matrix, dtype=float)
-    assert m.shape == (4, 4), f"expected 4x4 pose matrix, got {m.shape}"
-    homo = np.ones((len(points), 4))
-    homo[:, :3] = points[:, :3]
-    frontal = homo @ np.linalg.inv(m).T
-    w = frontal[:, 3:4]
-    w[w == 0] = 1.0
-    out = points.copy().astype(float)
-    out[:, :3] = frontal[:, :3] / w
-    return out.astype(np.float32)
-
-
-def normalize_frame_3d(points: np.ndarray,
-                       matrix: np.ndarray | None) -> tuple[np.ndarray, dict]:
-    """normalize_frame plus full 3D frontalization when the pose matrix is
-    available. Falls back to the 2D path (same contract) when it is not,
-    so old callers and logs stay comparable.
-
-    yaw_proxy_raw = pose BEFORE frontalization (diagnostic: how far the
-    head really turned). yaw_proxy = residual AFTER (what the index sees).
-    """
-    raw_yaw = yaw_proxy(points)
-    if matrix is None:
-        norm, info = normalize_frame(points)
-        info["yaw_proxy_raw"] = round(raw_yaw, 4)
-        info["yaw_deg_matrix"] = None
-        return norm, info
-    yaw = yaw_from_matrix(matrix)
-    frontal = frontalize_full(points, matrix)
-    norm, info = normalize_frame(frontal)
-    info["yaw_proxy_raw"] = round(raw_yaw, 4)
-    info["yaw_deg_matrix"] = round(float(np.degrees(yaw)), 1)
-    return norm, info
+# NOTE (2026-10-24): frontalization helpers lived here and were REMOVED.
+# Evidence from labeled logs: applying M^-1 to image-space points amplified
+# yaw ~2x (the matrix lives in metric 3D space). Pose is gates-only since.
+# See risks.md R4 and protocol 3.3. yaw_from_matrix stays: it feeds the gate.
