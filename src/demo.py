@@ -72,12 +72,20 @@ def draw_markers(frame: np.ndarray, pts: np.ndarray) -> np.ndarray:
     return out
 
 
+DISCLAIMER = "Research prototype - not a medical device"
+
+
 def draw_text(frame: np.ndarray, lines: list[str]) -> np.ndarray:
     y = 28
     for line in lines:
         cv2.putText(frame, line, (12, y), cv2.FONT_HERSHEY_SIMPLEX,
                     0.7, (255, 255, 255), 2)
         y += 30
+    # Permanent safety line, bottom-left, always visible on screen and in
+    # any recording: the clinical-risk framing must travel with the pixels.
+    h = frame.shape[0]
+    cv2.putText(frame, DISCLAIMER, (12, h - 14),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 200, 255), 2)
     return frame
 
 
