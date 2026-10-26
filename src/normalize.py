@@ -29,12 +29,6 @@ YAW_EXCLUDE_DEG = 20.0  # absolute outer guard: beyond this the projection
 YAW_REL_DEG = 12.0  # excursion from the SUBJECT'S OWN rest yaw. Same lesson
 # as roll: a subject resting at -8 deg has 28 deg of room one way and 12
 # the other under an absolute gate. PLACEHOLDER: calibrate with labeled logs.
-METRIC_YAW_DEG = 4.0  # dynamic-metric VALIDITY window. NOT a placeholder —
-# evidence 2026-10-25 (runs/demo_log_20261025_145531.csv): with a large
-# gesture, dyn_rel CHECK rate is 5-9% within 0-4 deg excursion and jumps to
-# 53-83% beyond 4 deg (perspective contaminates displacement-vs-rest only
-# when the gesture unmasks it). Quiet faces are unaffected at any yaw.
-# Phase-2 velocity features are the designed remedy for this brittleness.
 ROLL_EXCLUDE_DEG = 15.0  # absolute outer guard: beyond this, no correction
 # is even attempted (pure 2D leveling cannot undo real 3D tilt).
 ROLL_REL_DEG = 10.0  # tilt RELATIVE to the subject's own rest posture.
@@ -122,11 +116,7 @@ def normalize_frame(points: np.ndarray,
     if reason is None and rest_roll is not None \
             and abs(roll - rest_roll) > ROLL_REL_DEG:
         reason = "roll-rel"
-    metric_valid = True  # fallback: proxy-only frames (no matrix) stay valid
-    if rest_yaw is not None and yaw_deg is not None:
-        metric_valid = abs(yaw_deg - rest_yaw) <= METRIC_YAW_DEG
     info = {"roll_deg": roll, "yaw_proxy": yaw, "yaw_deg_matrix": yaw_deg,
-            "metric_valid": metric_valid,
             "accepted": reason is None, "rejected": reason}
     return normalize_scale(deroll(points)), info
 
@@ -135,9 +125,9 @@ def yaw_from_matrix(matrix: np.ndarray) -> float:
     """Yaw angle (radians) from a 4x4 facial pose matrix.
 
     Takes the rotation block, normalizes out scale per column, and reads
-    yaw = atan2(R[0,2], R[2,2]) — the Y-rotation convention. Sign and
-    magnitude are verified empirically (frontalized yaw_proxy must shrink
-    on real tilted frames); if it ever grows, this convention is wrong.
+    yaw = atan2(R[0,2], R[2,2]) — the Y-rotation convention. Used only to
+    feed the yaw gate (degrees); geometric correction was removed after
+    evidence showed matrix-space mismatch (see risks.md R4).
     """
     r = np.asarray(matrix, dtype=float)[:3, :3]
     norms = np.linalg.norm(r, axis=0, keepdims=True)

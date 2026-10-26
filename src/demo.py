@@ -1,7 +1,7 @@
 """Live demo: mesh overlay + real-time asymmetry metrics.
 
 Wires the whole Phase-1 chain per frame:
-    camera -> frame + t -> mesh (or None) -> normalize -> index -> draw
+    camera -> frame + t -> mesh (or None) -> pose gates -> align-to-rest -> index -> draw
 
 Drawing policy (deliberate): only the clinical groups (eyes, mouth, nose,
 chin) as markers — all 478 points cost draw time and read as noise.
@@ -51,6 +51,7 @@ from src.normalize import (
     roll_deg,
     yaw_from_matrix,
 )
+from src.pose import ALIGN_RESID_TOL, align_to_rest
 
 MARKERS = {
     "eyes": (list(EYES.values()), (255, 255, 0)),
@@ -60,12 +61,13 @@ MARKERS = {
 
 
 def draw_markers(frame: np.ndarray, pts: np.ndarray) -> np.ndarray:
-    """Circles on clinical groups (normalized x, y -> pixels)."""
-    h, w = frame.shape[:2]
+    """Circles on clinical groups. Points are PIXEL space (see mesh.py),
+    so they map directly — no rescaling here (rescaling twice was a real
+    bug caught when pixel space landed)."""
     out = frame
     for indices, color in MARKERS.values():
         for i in indices:
-            x, y = int(pts[i, 0] * w), int(pts[i, 1] * h)
+            x, y = int(pts[i, 0]), int(pts[i, 1])
             cv2.circle(out, (x, y), 3, color, -1)
     return out
 
@@ -98,7 +100,7 @@ def main() -> None:
     log = csv.writer(log_file)
     log.writerow(["label", "t", "roll_deg", "roll_rel_deg", "yaw_proxy",
                   "yaw_deg_matrix", "rest_yaw_deg",
-                  "accepted", "rejected", "metric_valid", "dynamic",
+                  "accepted", "rejected", "align_rmse_ew", "dynamic",
                   "dyn_rel", "asymmetry", "angle_diff_deg", "gesture",
                   "interocular_px"])
     print(f"[demo] logging to {log_path}")
@@ -107,7 +109,8 @@ def main() -> None:
     rest_mats: list = []
     rest_until = time.time() + REST_SECONDS
     rest_index: dict | None = None
-    rest_mesh: np.ndarray | None = None
+    rest_ref: np.ndarray | None = None  # raw-pixel rest mean: alignment target
+    rest_ref: np.ndarray | None = None  # raw-pixel rest mean: alignment target
     rest_roll: float | None = None
     rest_yaw: float | None = None
     rest_ready = False
@@ -130,8 +133,8 @@ def main() -> None:
             pts, matrix = extract_with_matrix(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
-                log.writerow([label, round(t, 3), "", "", "", "", "", False,
-                              "no-face", "", "", "", "", "", "", "", ""])
+                log.writerow([label, round(t, 3), "", "", "", "", False,
+                              "no-face", "", "", "", "", "", "", ""])
             else:
                 if t < rest_until:
                     rest_meshes.append(pts)
@@ -140,9 +143,9 @@ def main() -> None:
                 else:
                     if not rest_ready and rest_meshes:
                         rest_index = build_rest_index(rest_meshes)
-                        rest_mesh = np.mean(
-                            np.stack([normalize_scale(deroll(m))
-                                      for m in rest_meshes]), axis=0)
+                        rest_ref = np.mean(np.stack(rest_meshes), axis=0)
+                        rest_ref = np.mean(np.stack(rest_meshes), axis=0)
+                        rest_scale = interocular(rest_ref)
                         rest_roll = float(np.median(
                             [roll_deg(m) for m in rest_meshes]))
                         mat_yaws = [float(np.degrees(yaw_from_matrix(m)))
@@ -177,37 +180,38 @@ def main() -> None:
                                   round(info["yaw_proxy"], 3),
                                   info["yaw_deg_matrix"],
                                   "" if rest_yaw is None else round(rest_yaw, 1)]
-                        if not info["metric_valid"]:
-                            # Two-tier honesty: within 4-12 deg excursion the
-                            # frame is valid but the displacement metric is
-                            # pose-contaminated during gesture. Announce it —
-                            # never a CHECK the user learns to ignore.
-                            lines = ["pose-limited: face the camera",
-                                     f"(yaw {info['yaw_deg_matrix']}d, rest {rest_yaw}d)"]
-                            log.writerow(common + [True, "", False, "", "", "",
-                                                   "", "", g,
-                                                   round(interocular(pts), 1)])
-                        elif rest_mesh is not None:
-                            dyn = dynamic_asymmetry(norm, rest_mesh)
-                            window.append(dyn["dyn_rel"])
-                            med = round(median(window), 4)
-                            status = "OK" if med < DYN_REL_TOL else "CHECK"
-                            lines = [
-                                f"rel: {dyn['dyn_rel']} (med {med}) [{status}]",
-                                f"L {dyn['move_left']} R {dyn['move_right']}  "
-                                f"gesture: {g}",
-                            ]
-                            log.writerow(common + [True, "", True,
-                                                    dyn["dynamic"],
-                                                    dyn["dyn_rel"],
-                                                    idx["asymmetry"],
-                                                    idx["angle_diff_deg"], g,
-                                                    round(interocular(pts), 1)])
-                        else:
+                        if rest_ref is None:
                             lines = ["waiting for rest baseline"]
-                            log.writerow(common + [True, "", True, "", "", "",
+                            log.writerow(common + [True, "", "", "", "", "",
                                                    "", "", g,
                                                    round(interocular(pts), 1)])
+                        else:
+                            aligned, rmse, _ = align_to_rest(pts, rest_ref)
+                            rmse = round(rmse, 4)
+                            if rmse > ALIGN_RESID_TOL:
+                                lines = ["pose-limited: unstable alignment",
+                                         f"(residual {rmse} > tol {ALIGN_RESID_TOL})"]
+                                log.writerow(common + [True, "", rmse, "", "",
+                                                       "", "", "", g,
+                                                       round(interocular(pts), 1)])
+                            else:
+                                unit = interocular(rest_ref)
+                                dyn = dynamic_asymmetry(aligned / unit,
+                                                        rest_ref / unit)
+                                window.append(dyn["dyn_rel"])
+                                med = round(median(window), 4)
+                                status = "OK" if med < DYN_REL_TOL else "CHECK"
+                                lines = [
+                                    f"rel: {dyn['dyn_rel']} (med {med}) [{status}]",
+                                    f"L {dyn['move_left']} R {dyn['move_right']}  "
+                                    f"gesture: {g}",
+                                ]
+                                log.writerow(common + [True, "", rmse,
+                                                        dyn["dynamic"],
+                                                        dyn["dyn_rel"],
+                                                        idx["asymmetry"],
+                                                        idx["angle_diff_deg"], g,
+                                                        round(interocular(pts), 1)])
                     frame = draw_markers(frame, pts)
 
             if args.headless:
@@ -220,7 +224,7 @@ def main() -> None:
                     break
                 if key == ord("r"):
                     rest_meshes, rest_mats = [], []
-                    rest_ready, rest_yaw = False, None
+                    rest_ready, rest_yaw, rest_ref = False, None, None
                     rest_until = time.time() + REST_SECONDS
                     print("[demo] re-taking rest baseline...")
     finally:
