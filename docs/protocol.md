@@ -80,6 +80,18 @@ facial palsy discrimination over static asymmetry metrics?
 arXiv:2506.16578) as a mechanism for sharing facial kinematics without
 exposing identities — see `literature.md` (F6).
 
+### Detector robustness validation (R7, done Oct 2026)
+
+Reproducible procedure (`scripts/r7_validate.py`, report in
+`docs/experiments/r7-landmark-robustness.md`): capture neutral frames,
+apply a known Gaussian pixel-space pull (0/6/12/20 px) on each mouth
+corner toward the midline, re-run the detector, and report the follow
+ratio (detected vs. expected displacement) with an amplitude-0 noise
+control, fresh detector per frame, and seeded-shuffled amplitude order.
+Result: 80/80 faces tracked, ~75–90% follow-through at 12–20 px, no
+directional failure; ~1–1.4 px re-detection jitter floor. Synthetic,
+single-subject evidence — not clinical validity.
+
 **Rule:** every result declares its data source and what **cannot** be claimed from it.
 
 ## 5. Evaluation protocol

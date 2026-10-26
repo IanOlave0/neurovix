@@ -51,7 +51,8 @@ neurovix/
     ├── roadmap.md       # Phases, deliverables, acceptance criteria
     ├── protocol.md      # Experimental design: question, features, evaluation
     ├── risks.md         # Risk analysis with evidence
-    └── literature.md    # Literature survey (9 notes) + confirmed gaps
+    ├── literature.md    # Literature survey (9 notes) + confirmed gaps
+    └── experiments/     # Reproducible experiment reports (no face images)
 ```
 
 Setup: Python 3.11 via `uv` (`uv venv --python 3.11`), then install

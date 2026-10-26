@@ -11,9 +11,13 @@
 - **R2 — False negatives cause false reassurance.** Copilot-only output,
   deliberately biased toward false positives; the human decides.
   Evidence: `protocol.md` §6.
-- **R7 — Landmark degradation on asymmetric faces.** Robustness validation
-  from Phase 1; documented limits; fine-tuning as an option.
-  Evidence: `src/landmarks.py`, `tests/`, `literature.md` (note F5).
+- **R7 — Landmark degradation on asymmetric faces.** Preliminarily
+  mitigated by synthetic image-level validation (60–80/80 faces tracked,
+  ~75–90% follow-through, no directional failure); documented limits;
+  fine-tuning and clinical validation remain open.
+  Evidence: `docs/experiments/r7-landmark-robustness.md`,
+  `scripts/r7_validate.py`, `src/landmarks.py`, `tests/`,
+  `literature.md` (note F5).
 - **R4 — Pose and lighting confounders.** Scale/pose normalization plus frame
   exclusions. Evidence: `protocol.md` §§3.2–3.3.
 - **R6 — Regulatory scope.** Research framing; no clinical use, no diagnostic
@@ -32,7 +36,7 @@
 | R4 | Pose/lighting confounders | High | Medium | Normalization + exclusions | protocol.md §§3.2–3.3 | Open — closes with documented thresholds + tests (Phase 1) |
 | R5 | Scope creep (features/gestures) | High | Medium | Phases with acceptance criteria; MVP first | roadmap.md | Controlled |
 | R6 | Regulatory exposure if framed as diagnosis | Medium | High | Research/education framing; no clinical use | README disclaimer; protocol.md §6 | Mitigated by design |
-| R7 | Landmark degradation on asymmetric faces (models trained on healthy faces) | High | High | Robustness validation on synthetic asymmetry from Phase 1; documented limits; fine-tuning as an option | src/landmarks.py; tests/; literature.md (F5) | Open — closes with robustness report (Phase 1) |
+| R7 | Landmark degradation on asymmetric faces (models trained on healthy faces) | High | High | Synthetic image-level validation + documented limits; fine-tuning and clinical validation as follow-ups | docs/experiments/r7-landmark-robustness.md; scripts/r7_validate.py; src/landmarks.py; tests/; literature.md (F5) | Preliminarily mitigated (Oct 2026); clinical/multi-subject validation open |
 
 ## Appendix: viability assessment (internal framework)
 
