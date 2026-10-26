@@ -41,3 +41,17 @@ def test_output_shape_preserved():
     out = apply_warp(frame, np.array([32.0, 24.0]), 10.0,
                      np.array([1.0, 0.0]), 8.0)
     assert out.shape == frame.shape
+
+
+def test_known_dot_moves_as_predicted():
+    # End-to-end warp check on synthetic content: a bright dot's centroid
+    # must travel (approximately) the field displacement at its location.
+    frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    frame[48:53, 48:53] = (255, 255, 255)
+    center = np.array([50.0, 50.0])
+    out = apply_warp(frame, center, 30.0, np.array([1.0, 0.0]), 10.0)
+    ys, xs = np.nonzero(out[..., 0] > 50)
+    assert len(xs) > 0
+    cx, cy = xs.mean(), ys.mean()
+    assert abs(cx - 60.0) < 1.5
+    assert abs(cy - 50.0) < 1.5
