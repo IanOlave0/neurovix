@@ -133,7 +133,7 @@ def main() -> None:
             pts, matrix = extract_with_matrix(frame, landmarker, ms)
             if pts is None:
                 lines = ["no face detected"]
-                log.writerow([label, round(t, 3), "", "", "", "", False,
+                log.writerow([label, round(t, 3), "", "", "", "", "", False,
                               "no-face", "", "", "", "", "", "", ""])
             else:
                 if t < rest_until:
