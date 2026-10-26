@@ -3,7 +3,7 @@
 > Quantitative neurological biomarker from any device camera: early stroke
 > triage support through facial asymmetry detection.
 
-**Status:** Phase 1 — Geometric MVP (in progress)
+**Status:** Phase 1 — Geometric MVP (complete)
 
 ## Problem
 
@@ -16,7 +16,7 @@
 Turn the front camera of any phone, tablet, or laptop into an objective biomarker:
 
 1. **Live capture** of the patient's face
-2. **3D landmarking** with MediaPipe FaceMesh
+2. **3D landmarking** with MediaPipe Face Landmarker (478-pt topology)
 3. **Kinematic-dynamic metrics**: angular deviation, vector asymmetry, gesture velocity, inter-hemispheric onset lag
 4. **Objective Facial Palsy Index** (interpretable)
 5. **Copilot recommendation** — never an autonomous decision
@@ -42,11 +42,19 @@ Turn the front camera of any phone, tablet, or laptop into an objective biomarke
 ```
 neurovix/
 ├── README.md
-├── requirements.txt     # Pinned environment (see setup below)
+├── requirements.txt     # Pinned environment (see Setup below)
 ├── src/
-│   ├── __init__.py
-│   └── landmarks.py     # Documented FaceMesh index constants + validation
-├── tests/               # pytest suite (topology safety net, risk R7)
+│   ├── capture.py       # Camera loop: real timestamps + rest baseline
+│   ├── mesh.py          # FaceLandmarker VIDEO mode -> pixel-space mesh
+│   ├── landmarks.py     # Documented index constants + validation (R7 net)
+│   ├── normalize.py     # Scale + rest-referenced pose gates (R4)
+│   ├── pose.py          # Rest-referenced 2D alignment backend
+│   ├── index.py         # Interpretable static + proportional dynamic index
+│   ├── warp.py          # Controlled pixel deformation (R7 experiment)
+│   └── demo.py          # Live demo: overlay + metrics + per-frame CSV logs
+├── scripts/
+│   └── r7_validate.py   # R7 follow-through experiment
+├── tests/               # pytest suite (36 tests)
 └── docs/
     ├── roadmap.md       # Phases, deliverables, acceptance criteria
     ├── protocol.md      # Experimental design: question, features, evaluation
@@ -55,8 +63,29 @@ neurovix/
     └── experiments/     # Reproducible experiment reports (no face images)
 ```
 
-Setup: Python 3.11 via `uv` (`uv venv --python 3.11`), then install
-`requirements.txt`. See `docs/roadmap.md` (Phase 0) for the full trail.
+## Setup (reproducible)
+
+Requirements: Python 3.11 (via `uv`), a webcam, ~100 MB disk.
+
+```bash
+git clone https://github.com/IanOlave0/neurovix.git
+cd neurovix
+uv venv --python 3.11
+uv pip install --python .venv/bin/python -r requirements.txt
+mkdir -p models
+curl -sL -o models/face_landmarker.task \
+  https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+.venv/bin/python -m pytest tests/   # expect: all passing
+.venv/bin/python -m src.demo        # live window (q=quit, r=rest baseline)
+```
+
+Notes:
+
+- `models/` is git-ignored by design (regenerable artifact; biometric data
+  is never versioned). The model URL also lives in `src/mesh.py`.
+- `runs/` (per-frame CSV logs) and `data/` (experiment captures) are local
+  only and never committed.
+- See `docs/roadmap.md` for phases and acceptance criteria.
 
 ## Medical disclaimer
 

@@ -12,7 +12,7 @@
   deliberately biased toward false positives; the human decides.
   Evidence: `protocol.md` §6.
 - **R7 — Landmark degradation on asymmetric faces.** Preliminarily
-  mitigated by synthetic image-level validation (60–80/80 faces tracked,
+  mitigated by synthetic image-level validation (80/80 faces tracked,
   ~75–90% follow-through, no directional failure); documented limits;
   fine-tuning and clinical validation remain open.
   Evidence: `docs/experiments/r7-landmark-robustness.md`,

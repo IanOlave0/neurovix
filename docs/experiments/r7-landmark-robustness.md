@@ -1,6 +1,6 @@
 # R7 — Landmark Robustness Under Synthetic Facial Asymmetry
 
-> Experiment date: 2026-10-26. Reproducible via `scripts/r7_validate.py`.
+> Experiment date: 2026-10-25. Reproducible via `scripts/r7_validate.py`.
 > Raw face images are NOT published (privacy); method, code, and aggregate
 > results are.
 

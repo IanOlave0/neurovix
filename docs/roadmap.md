@@ -14,7 +14,7 @@
 | Phase | Status | Deliverable | Acceptance |
 |---|---|---|---|
 | 0. Planning and literature | Done | Study protocol, literature survey (9 notes), reproducible setup | protocol.md, literature.md, pinned env + 4/4 tests |
-| 1. Geometric MVP | In progress | Live demo + interpretable asymmetry index | Real-time on laptop; quantified induced asymmetry; documented behavior on asymmetric faces |
+| 1. Geometric MVP | Done | Live demo + interpretable asymmetry index | Real-time on laptop; synthetic-asymmetry follow-through quantified; behavior on asymmetric faces documented |
 | 2. Experimental protocol | Planned | Rigorous evaluation + results | Reproducible results table with metrics, ablations, error analysis |
 | 3. Writing and publication | Planned | Preprint + public repo | Public PDF + reproducible repo |
 
@@ -27,13 +27,13 @@
 
 ## Phase 1 — Geometric MVP
 
-- [ ] Stable capture pipeline (OpenCV + MediaPipe FaceMesh)
-- [ ] Landmark module with documented indices (`landmarks.py`)
-- [ ] Normalization: scale (interocular) and pose (roll/yaw)
-- [ ] Per-session rest baseline
-- [ ] Gesture: smile → interpretable asymmetry index
-- [ ] Live demo: mesh overlay + real-time metrics
-- [ ] **Robustness R7:** landmark stability check under controlled synthetic asymmetry
+- [x] Stable capture pipeline (OpenCV + MediaPipe Face Landmarker, real per-frame timestamps)
+- [x] Landmark module with documented indices (`landmarks.py`, 478-pt topology)
+- [x] Normalization: scale (interocular) and pose gates (roll/yaw, rest-referenced) + rest-aligned measurement backend (`pose.py`)
+- [x] Per-session rest baseline (rest meshes, `rest_roll`, `rest_yaw`)
+- [x] Gesture: smile → interpretable asymmetry index (static + proportional dynamic)
+- [x] Live demo: mesh overlay + real-time metrics (`demo.py`, per-frame CSV logging)
+- [x] **Robustness R7:** landmark follow-through under controlled synthetic pixel asymmetry (`docs/experiments/r7-landmark-robustness.md`)
 
 **Acceptance:** the demo runs in real time on a laptop, quantifies
 controlled induced asymmetry, and documents its behavior on asymmetric faces.
