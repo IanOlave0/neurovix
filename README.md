@@ -87,6 +87,13 @@ Notes:
   only and never committed.
 - See `docs/roadmap.md` for phases and acceptance criteria.
 
+## Demo
+
+[![NeuroVix live demo](https://img.youtube.com/vi/-PTMb1_zJOQ/0.jpg)](https://youtu.be/-PTMb1_zJOQ)
+
+Live asymmetric-smile measurement with real-time mesh overlay and pose-aware
+validity display. Research prototype — not a medical device.
+
 ## Medical disclaimer
 
 This project is research and education. **It is not a medical device, does
